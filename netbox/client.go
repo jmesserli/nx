@@ -53,6 +53,8 @@ type GenerateOptions struct {
 
 	ReverseZoneName string
 	ForwardZoneName string
+
+	CNames []string
 }
 
 type IPAMPrefix struct {
@@ -68,6 +70,7 @@ var reverseEnabledRegex = regexp.MustCompile("nbbx_reverse(?:_enabled?)?:(true|f
 var forwardEnabledRegex = regexp.MustCompile("nbbx_forward(?:_enabled?)?:(true|false)")
 var forwardZoneRegex = regexp.MustCompile("nbbx_forward_zone:(.+)")
 var reverseZoneRegex = regexp.MustCompile("nbbx_reverse_zone:(.+)")
+var cnameRegex = regexp.MustCompile("nbbx_cname:(.+)")
 
 func parseGenerateOptions(tags []string, parentPrefix *IPAMPrefix, options *GenerateOptions) {
 	if parentPrefix != nil {
@@ -79,6 +82,7 @@ func parseGenerateOptions(tags []string, parentPrefix *IPAMPrefix, options *Gene
 		options.ForwardZoneName = pOptions.ForwardZoneName
 		options.ReverseZoneName = pOptions.ReverseZoneName
 	}
+	options.CNames = []string{}
 
 	for _, tag := range tags {
 		matches := enabledRegex.FindStringSubmatch(tag)
@@ -109,6 +113,11 @@ func parseGenerateOptions(tags []string, parentPrefix *IPAMPrefix, options *Gene
 		if matches != nil {
 			options.ForwardZoneName = matches[1]
 			continue
+		}
+
+		matches = cnameRegex.FindStringSubmatch(tag)
+		if matches != nil {
+			options.CNames = append(options.CNames, matches[1])
 		}
 	}
 }
