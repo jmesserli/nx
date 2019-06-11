@@ -14,20 +14,7 @@ import (
 
 // SOAInfo contains all the information to write the SOA record
 type SOAInfo struct {
-	// 	$TTL    86400
-	// @       IN      SOA     vm-ns-1.pegnu.net.      postmaster.peg.nu. (
-	//         2019021601  ; Serial
-	//         3600            ; Refresh
-	//         1800            ; Retry
-	//         86400           ; Expire
-	//         600 )           ; Negative Cache TTL
-
-	// ; Nameserver
-	// @                   IN  NS  vm-ns-1
-	// vm-ns-1             IN  A   172.20.20.28
-
 	NameserverFQDN        string
-	NameserverIP          string
 	DottedMailResponsible string
 	TTL                   int
 	Refresh               int
@@ -95,6 +82,7 @@ func putMap(theMap map[string][]resourceRecord, key string, value resourceRecord
 	}
 }
 
+// GenerateZones generates the BIND zonefiles
 func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 	t := time.Now()
 

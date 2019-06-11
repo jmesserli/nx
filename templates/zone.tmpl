@@ -12,7 +12,6 @@ $TTL    {{ .BindDefaultRRTTL }}
         {{ .TTL }} )           ; Negative Cache TTL
 ; Nameserver
 @ NS {{ .NameserverFQDN }}
-{{ .NameserverFQDN }} A {{ .NameserverIP }}
 {{- end }}
 
 {{ range $rr := .Records }}{{ $rr.Name }} {{ $rr.Type }} {{ $rr.RData }}

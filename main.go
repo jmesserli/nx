@@ -30,6 +30,5 @@ func main() {
 
 		DottedMailResponsible: "postmaster.peg.nu.",
 		NameserverFQDN:        "vm-ns-1.bue39.pegnu.net.",
-		NameserverIP:          "172.20.20.28",
 	})
 }
