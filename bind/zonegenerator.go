@@ -3,6 +3,7 @@ package bind
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"text/template"
@@ -37,14 +38,14 @@ type SOAInfo struct {
 }
 
 func applyZoneFlattening(address *netbox.IPAddress) {
-	parts := strings.Split(address.GenOptions.ForwardZoneName, ".")
+	address.Name = strings.Split(address.Name, " ")[0]
 
-	if len(parts) <= 2 {
+	parts := strings.Split(address.GenOptions.ForwardZoneName, ".")
+	if len(parts) < 2 {
 		return
 	}
 
 	zoneName := strings.Join(parts[len(parts)-2:], ".")
-
 	oldName := address.Name
 	if strings.HasSuffix(oldName, address.GenOptions.ForwardZoneName) {
 		lastIdx := len(oldName) - len(address.GenOptions.ForwardZoneName) - 1
@@ -109,12 +110,22 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 
 		applyZoneFlattening(&address)
 
-		if address.GenOptions.ForwardEnabled {
+		if address.GenOptions.ForwardEnabled && len(address.GenOptions.ForwardZoneName) > 0 {
+			ip, _, _ := net.ParseCIDR(address.Address)
+
 			putMap(zoneRecordsMap, address.GenOptions.ForwardZoneName, resourceRecord{
 				Name:  address.Name,
 				Type:  A,
-				RData: address.Address,
+				RData: ip.String(),
 			})
+
+			for _, cname := range address.GenOptions.CNames {
+				putMap(zoneRecordsMap, address.GenOptions.ForwardZoneName, resourceRecord{
+					Name:  cname,
+					Type:  CName,
+					RData: fmt.Sprintf("%s.%s.", address.Name, address.GenOptions.ForwardZoneName),
+				})
+			}
 		}
 	}
 
