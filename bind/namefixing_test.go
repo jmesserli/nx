@@ -53,7 +53,7 @@ func makeAddress(name, zone string) netbox.IPAddress {
 
 func testNameFixing(original, expect netbox.IPAddress, t *testing.T) {
 	updated := original
-	applyZoneFlattening(&updated)
+	FixFlattenAddress(&updated)
 
 	if updated.Name != expect.Name {
 		t.Errorf("Expected Name to be <%s>; but was <%s>", expect.Name, updated.Name)

@@ -3,6 +3,7 @@ package bind
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/jmesserli/netbox-to-bind/netbox"
 )
+
+var logger = log.New(os.Stdout, "[generator] ", log.LstdFlags)
 
 // SOAInfo contains all the information to write the SOA record
 type SOAInfo struct {
@@ -25,27 +28,36 @@ type SOAInfo struct {
 	Serial                string
 }
 
-func applyZoneFlattening(address *netbox.IPAddress) {
-	address.Name = strings.Split(address.Name, " ")[0]
+func FixFlattenAddress(address *netbox.IPAddress) {
+	originalName := address.Name
+	// remove everyting after the first space
+	address.Name = strings.Split(originalName, " ")[0]
 
-	parts := strings.Split(address.GenOptions.ForwardZoneName, ".")
-	if len(parts) < 2 {
+	originalZone := address.GenOptions.ForwardZoneName
+	if len(originalZone) == 0 {
 		return
 	}
+	zoneParts := strings.Split(originalZone, ".")
+	cutoff := ""
+	shortZone := originalZone
+	if len(zoneParts) > 2 {
+		// cut off everything that is before the last 2 zone parts
+		cutoff = strings.Join(zoneParts[:len(zoneParts)-2], ".")
+		shortZone = originalZone[len(cutoff)+1:]
+	}
+	address.GenOptions.ForwardZoneName = shortZone
 
-	zoneName := strings.Join(parts[len(parts)-2:], ".")
-	oldName := address.Name
-	if strings.HasSuffix(oldName, address.GenOptions.ForwardZoneName) {
-		lastIdx := len(oldName) - len(address.GenOptions.ForwardZoneName) - 1
-		address.Name = oldName[:lastIdx]
+	if strings.HasSuffix(address.Name, originalZone) {
+		// remove suffix from name
+		address.Name = address.Name[:len(address.Name)-len(originalZone)-1]
 	}
 
-	name := fmt.Sprintf("%s.%s", address.Name, strings.Join(parts[:len(parts)-2], "."))
+	if len(cutoff) > 0 {
+		// append the zone cutoff to the name
+		address.Name = fmt.Sprintf("%s.%s", address.Name, cutoff)
+	}
 
-	fmt.Printf("%s:\n    Original Name: %s\n    Original Zone: %s\n    New Name: %s\n    New Zone: %s\n", address.Address, oldName, address.GenOptions.ForwardZoneName, name, zoneName)
-
-	address.GenOptions.ForwardZoneName = zoneName
-	address.Name = name
+	logger.Printf("(%s).%s -> (%s).%s\n", originalName, originalZone, address.Name, shortZone)
 }
 
 type rrType string
@@ -98,7 +110,7 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 			continue
 		}
 
-		applyZoneFlattening(&address)
+		FixFlattenAddress(&address)
 
 		if address.GenOptions.ForwardEnabled && len(address.GenOptions.ForwardZoneName) > 0 {
 			ip, _, _ := net.ParseCIDR(address.Address)

@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 
 	"github.com/jmesserli/netbox-to-bind/util"
@@ -15,8 +13,6 @@ import (
 
 const baseURL = "https://netbox.pegnu.cloud/api"
 const apiKey = "a9ed5b567a4b7de4e9e40ec15bb60edf993b966e"
-
-var logger = log.New(os.Stdout, "[netbox-client debug] ", log.LstdFlags)
 
 func performGET(path string, query string) []byte {
 	if len(query) == 0 {
@@ -26,7 +22,6 @@ func performGET(path string, query string) []byte {
 	}
 
 	url := fmt.Sprintf("%v%v%v", baseURL, path, query)
-	logger.Printf("request url=%s\n", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Token %v", apiKey))
 	res, err := http.DefaultClient.Do(req)
