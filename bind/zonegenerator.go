@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"text/tabwriter"
 	"text/template"
 	"time"
 
@@ -69,6 +70,7 @@ type resourceRecord struct {
 type templateArguments struct {
 	SOAInfo     SOAInfo
 	Records     []resourceRecord
+	ZoneName    string
 	GeneratedAt string
 }
 
@@ -111,7 +113,7 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 				putMap(zoneRecordsMap, address.GenOptions.ForwardZoneName, resourceRecord{
 					Name:  cname,
 					Type:  CName,
-					RData: fmt.Sprintf("%s.%s.", address.Name, address.GenOptions.ForwardZoneName),
+					RData: address.Name,
 				})
 			}
 		}
@@ -130,8 +132,16 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
+		templateArgs.ZoneName = zone
 
-		fmt.Println("Printing zone", zone)
-		zoneTemplate.Execute(os.Stdout, templateArgs)
+		f, err := os.Create(fmt.Sprintf("./zones/%s.db", zone))
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		w := tabwriter.NewWriter(f, 2, 2, 2, ' ', 0)
+		zoneTemplate.Execute(w, templateArgs)
+		w.Flush()
 	}
 }
