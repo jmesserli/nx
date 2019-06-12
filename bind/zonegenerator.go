@@ -114,10 +114,18 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 
 		if address.GenOptions.ForwardEnabled && len(address.GenOptions.ForwardZoneName) > 0 {
 			ip, _, _ := net.ParseCIDR(address.Address)
+			isIP4 := (strings.Count(ip.String(), ":") < 2)
+
+			var recordType rrType
+			if isIP4 {
+				recordType = A
+			} else {
+				recordType = Aaaa
+			}
 
 			putMap(zoneRecordsMap, address.GenOptions.ForwardZoneName, resourceRecord{
 				Name:  address.Name,
-				Type:  A,
+				Type:  recordType,
 				RData: ip.String(),
 			})
 
