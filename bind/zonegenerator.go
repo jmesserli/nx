@@ -31,7 +31,7 @@ type SOAInfo struct {
 func FixFlattenAddress(address *netbox.IPAddress) {
 	originalName := address.Name
 	// remove everyting after the first space
-	address.Name = strings.Split(originalName, " ")[0]
+	address.Name = strings.Split(strings.ToLower(originalName), " ")[0]
 
 	originalZone := address.GenOptions.ForwardZoneName
 	if len(originalZone) == 0 {
