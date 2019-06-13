@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"strings"
 	"text/tabwriter"
 	"text/template"
@@ -189,6 +190,14 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 	}
 	zoneTemplate := template.Must(template.New("zone").Parse(string(templateString)))
 
+	// clean zone directory
+	dir, err := ioutil.ReadDir("./zones")
+	if err != nil {
+		panic(err)
+	}
+	for _, d := range dir {
+		os.RemoveAll(path.Join([]string{".", "zones", d.Name()}...))
+	}
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
 		templateArgs.ZoneName = zone
