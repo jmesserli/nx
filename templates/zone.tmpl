@@ -6,11 +6,11 @@
 {{ with .SOAInfo -}}
 $TTL	{{ .BindDefaultRRTTL }}
 @	IN SOA	{{ .NameserverFQDN }} {{ .DottedMailResponsible }} (
-	{{ .Serial }}	; Serial
-	{{ .Refresh }}	; Refresh
-	{{ .Retry }}	; Retry
-	{{ .Expire }}	; Expire
-	{{ .TTL }}	; Negative Cache TTL
+	{{ .Serial }}	; serial
+	{{ .Refresh }}	; slave refresh interval
+	{{ .Retry }}	; slave retry interval
+	{{ .Expire }}	; slave copy expire interval
+	{{ .TTL }}	; NXDOMAIN cache time
 )
 
 ; Nameserver

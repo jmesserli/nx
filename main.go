@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/jmesserli/netbox-to-bind/bind"
 	"github.com/jmesserli/netbox-to-bind/netbox"
@@ -26,11 +27,11 @@ func main() {
 
 	logger.Println("Generating zone files")
 	bind.GenerateZones(addressList, bind.SOAInfo{
-		BindDefaultRRTTL: 86400,
-		Expire:           86400,
-		Refresh:          1800,
-		Retry:            1800,
-		TTL:              600,
+		BindDefaultRRTTL: int(2 * time.Minute / time.Second),
+		Expire:           int(48 * time.Hour / time.Second),
+		Refresh:          int(15 * time.Minute / time.Second),
+		Retry:            int(15 * time.Minute / time.Second),
+		TTL:              int(10 * time.Minute / time.Second),
 
 		DottedMailResponsible: "postmaster.peg.nu.",
 		NameserverFQDN:        "vm-ns-1.bue39.pegnu.net.",

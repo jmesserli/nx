@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jmesserli/netbox-to-bind/netbox"
+	"github.com/jmesserli/netbox-to-bind/util"
 )
 
 var logger = log.New(os.Stdout, "[generator] ", log.LstdFlags)
@@ -96,6 +97,32 @@ func putMap(theMap map[string][]resourceRecord, key string, value resourceRecord
 	}
 }
 
+func ipToNibble(cidr string, minimal bool) string {
+	ip, net, _ := net.ParseCIDR(cidr)
+	isIP4 := (strings.Count(ip.String(), ":") < 2)
+
+	if isIP4 {
+		split := strings.Split(ip.String(), ".")
+		reverse := util.ReverseSlice(split)
+		if minimal {
+			prefixSize, _ := net.Mask.Size()
+			prefixParts := prefixSize / 8
+			reverse = reverse[len(reverse)-prefixParts:]
+		}
+		joined := strings.Join(reverse, ".")
+		return fmt.Sprintf("%s.in-addr.arpa", joined)
+	}
+	// else IPv6
+	split := strings.Split(util.ExpandIPv6(ip), "")
+	reverse := util.ReverseSlice(split)
+	if minimal {
+		prefixSize, _ := net.Mask.Size()
+		prefixParts := prefixSize / 4
+		reverse = reverse[len(reverse)-prefixParts:]
+	}
+	return fmt.Sprintf("%s.ip6.arpa", strings.Join(reverse, "."))
+}
+
 // GenerateZones generates the BIND zonefiles
 func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 	t := time.Now()
@@ -112,10 +139,10 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 
 		FixFlattenAddress(&address)
 
-		if address.GenOptions.ForwardEnabled && len(address.GenOptions.ForwardZoneName) > 0 {
-			ip, _, _ := net.ParseCIDR(address.Address)
-			isIP4 := (strings.Count(ip.String(), ":") < 2)
+		ip, _, _ := net.ParseCIDR(address.Address)
+		isIP4 := (strings.Count(ip.String(), ":") < 2)
 
+		if address.GenOptions.ForwardEnabled && len(address.GenOptions.ForwardZoneName) > 0 {
 			var recordType rrType
 			if isIP4 {
 				recordType = A
@@ -136,6 +163,18 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 					RData: address.Name,
 				})
 			}
+		}
+
+		if address.GenOptions.ReverseEnabled && len(address.GenOptions.ReverseZoneName) > 0 {
+			zoneName := ipToNibble(address.GenOptions.ReverseZoneName, true)
+
+			name := ipToNibble(address.Address, false)
+			name = name[:len(name)-len(zoneName)-1]
+			putMap(zoneRecordsMap, zoneName, resourceRecord{
+				Name:  name,
+				Type:  Ptr,
+				RData: fmt.Sprintf("%s.%s.", address.Name, address.GenOptions.ForwardZoneName),
+			})
 		}
 	}
 
