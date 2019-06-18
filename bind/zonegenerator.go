@@ -129,7 +129,10 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 	t := time.Now()
 
 	if len(soaInfo.Serial) == 0 {
-		soaInfo.Serial = fmt.Sprintf("%04d%02d%02d%02d%02d%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+		atMidnight := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local).Unix()
+		iteration := (t.Unix() - atMidnight) / (60 * 2)
+
+		soaInfo.Serial = fmt.Sprintf("%02d%02d%02d%03d", t.Year()-2000, t.Month(), t.Day(), iteration)
 	}
 
 	var zoneRecordsMap = make(map[string][]resourceRecord)
