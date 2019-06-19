@@ -9,4 +9,5 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 COPY --from=builder /go/bin/netbox-to-bind .
+COPY --from=builder /go/src/github.com/jmesserli/netbox-to-bind/templates ./templates
 CMD ["./netbox-to-bind"]
