@@ -28,9 +28,9 @@ zone "{{ $zone.Name }}" {
 	{{- if $zone.IsSlave }}
     masters { {{ $zone.MasterIP }}; };
 	{{- else }}
-	allow-transfer { "nbbx-slaves-transfer"; };
-	also-notify { "nbbx-slaves-notify"; };
-	notify yes;
+    allow-transfer { "nbbx-slaves-transfer"; };
+    also-notify { "nbbx-slaves-notify"; };
+    notify yes;
 	{{- end }}
 };
 {{ end }}
