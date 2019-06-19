@@ -2,7 +2,10 @@ package util
 
 import (
 	"encoding/hex"
+	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 )
 
@@ -25,4 +28,15 @@ func ExpandIPv6(ip net.IP) string {
 	dst := make([]byte, hex.EncodedLen(len(ip)))
 	_ = hex.Encode(dst, ip)
 	return string(dst)
+}
+
+func CleanDirectory(directory string) {
+	// clean zone directory
+	dir, err := ioutil.ReadDir(directory)
+	if err != nil {
+		panic(err)
+	}
+	for _, d := range dir {
+		os.RemoveAll(fmt.Sprintf("%s/%s", directory, d.Name()))
+	}
 }

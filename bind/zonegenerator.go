@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path"
 	"strings"
 	"text/tabwriter"
 	"text/template"
@@ -125,7 +124,7 @@ func ipToNibble(cidr string, minimal bool) string {
 }
 
 // GenerateZones generates the BIND zonefiles
-func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
+func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) []string {
 	t := time.Now()
 
 	if len(soaInfo.Serial) == 0 {
@@ -192,15 +191,8 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 		panic(err)
 	}
 	zoneTemplate := template.Must(template.New("zone").Parse(string(templateString)))
+	util.CleanDirectory("./zones")
 
-	// clean zone directory
-	dir, err := ioutil.ReadDir("./zones")
-	if err != nil {
-		panic(err)
-	}
-	for _, d := range dir {
-		os.RemoveAll(path.Join([]string{".", "zones", d.Name()}...))
-	}
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
 		templateArgs.ZoneName = zone
@@ -215,4 +207,10 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) {
 		zoneTemplate.Execute(w, templateArgs)
 		w.Flush()
 	}
+
+	zones := make([]string, 0, len(zoneRecordsMap))
+	for key := range zoneRecordsMap {
+		zones = append(zones, key)
+	}
+	return zones
 }

@@ -1,0 +1,72 @@
+{
+  "definitions": {},
+  "$schema": "",
+  "$id": "http://example.com/root.json",
+  "type": "object",
+  "title": "Configuration Root",
+  "default": null,
+  "required": ["zones"],
+  "properties": {
+    "zones": {
+      "$id": "#/properties/zones",
+      "type": "array",
+      "title": "DNS Zones",
+      "description": "Contains all configured zones",
+      "default": null,
+      "items": {
+        "$id": "#/properties/zones/items",
+        "type": "object",
+        "title": "DNS Zone",
+        "description": "Represents a single zone",
+        "default": null,
+        "required": ["name", "master", "dotted_mail"],
+        "properties": {
+          "name": {
+            "$id": "#/properties/zones/items/properties/name",
+            "type": "string",
+            "title": "Zone Name",
+            "description": "The name of the DNS zone",
+            "default": "",
+            "examples": ["pegnu.net", "rack.farm", "20.172.in-addr.arpa"],
+            "pattern": "^(.*)$"
+          },
+          "master": {
+            "$id": "#/properties/zones/items/properties/master",
+            "type": "object",
+            "title": "Zone Master",
+            "description": "Configures the SOA record for the zone",
+            "default": null,
+            "required": ["name", "ip"],
+            "properties": {
+              "name": {
+                "$id": "#/properties/zones/items/properties/master/properties/name",
+                "type": "string",
+                "title": "DNS Server Name",
+                "default": "",
+                "examples": ["vm-ns-1.bue39.pegnu.net", "ns1.rack.farm"],
+                "pattern": "^(.*)$"
+              },
+              "ip": {
+                "$id": "#/properties/zones/items/properties/master/properties/ip",
+                "type": "string",
+                "title": "DNS Server IP",
+                "default": "",
+                "examples": ["172.20.20.28", "10.0.0.23"],
+                "pattern": "^(.*)$"
+              }
+            }
+          },
+          "dotted_mail": {
+            "$id": "#/properties/zones/items/properties/dotted_mail",
+            "type": "string",
+            "title": "Dotted Administrator Mail",
+            "description": "The email address of the person responsible for the zone",
+            "default": "",
+            "examples": ["admin.peg.nu", "joel\\.messerli.peg.nu"],
+            "pattern": "^(.*)$"
+          }
+        }
+      }
+    }
+  }
+}

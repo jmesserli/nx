@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/jmesserli/netbox-to-bind/config"
+
 	"github.com/jmesserli/netbox-to-bind/bind"
 	"github.com/jmesserli/netbox-to-bind/netbox"
 )
@@ -12,6 +14,8 @@ import (
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
 
 func main() {
+	conf := config.ReadConfig("./config.json")
+
 	logger.Println("Loading prefixes")
 	prefixes := netbox.GetIPAMPrefixes()
 
@@ -26,7 +30,7 @@ func main() {
 	}
 
 	logger.Println("Generating zone files")
-	bind.GenerateZones(addressList, bind.SOAInfo{
+	generatedZones := bind.GenerateZones(addressList, bind.SOAInfo{
 		BindDefaultRRTTL: int(2 * time.Minute / time.Second),
 		Expire:           int(48 * time.Hour / time.Second),
 		Refresh:          int(15 * time.Minute / time.Second),
@@ -36,4 +40,5 @@ func main() {
 		DottedMailResponsible: "postmaster.peg.nu.",
 		NameserverFQDN:        "vm-ns-1.bue39.pegnu.net.",
 	})
+	bind.GenerateConfigs(generatedZones, conf)
 }
