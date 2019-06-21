@@ -8,7 +8,7 @@ import (
 type MasterConfig struct {
 	Name        string   `json:"name"`
 	IP          string   `json:"ip"`
-	DottedEmail string   `json:"dotted_email"`
+	DottedEmail string   `json:"dotted_mail"`
 	Zones       []string `json:"zones"`
 }
 
