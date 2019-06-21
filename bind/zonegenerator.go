@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/jmesserli/netbox-to-bind/config"
+
 	"github.com/jmesserli/netbox-to-bind/netbox"
 	"github.com/jmesserli/netbox-to-bind/util"
 )
@@ -29,10 +31,16 @@ type SOAInfo struct {
 	Serial                string
 }
 
+var unknownNameCounter = 1
+
 func FixFlattenAddress(address *netbox.IPAddress) {
 	originalName := address.Name
 	// remove everyting after the first space
 	address.Name = strings.Split(strings.ToLower(originalName), " ")[0]
+	if len(address.Name) == 0 {
+		address.Name = fmt.Sprintf("unknown-static-%v", unknownNameCounter)
+		unknownNameCounter++
+	}
 
 	originalZone := address.GenOptions.ForwardZoneName
 	if len(originalZone) == 0 {
@@ -124,14 +132,14 @@ func ipToNibble(cidr string, minimal bool) string {
 }
 
 // GenerateZones generates the BIND zonefiles
-func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) []string {
+func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf config.NbbxConfig) []string {
 	t := time.Now()
 
-	if len(soaInfo.Serial) == 0 {
+	if len(defaultSoaInfo.Serial) == 0 {
 		atMidnight := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local).Unix()
 		iteration := (t.Unix() - atMidnight) / (60 * 2)
 
-		soaInfo.Serial = fmt.Sprintf("%02d%02d%02d%03d", t.Year()-2000, t.Month(), t.Day(), iteration)
+		defaultSoaInfo.Serial = fmt.Sprintf("%02d%02d%02d%03d", t.Year()-2000, t.Month(), t.Day(), iteration)
 	}
 
 	var zoneRecordsMap = make(map[string][]resourceRecord)
@@ -182,7 +190,6 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) []string {
 	}
 
 	templateArgs := templateArguments{
-		SOAInfo:     soaInfo,
 		GeneratedAt: t.Format(time.RFC3339),
 	}
 
@@ -196,6 +203,14 @@ func GenerateZones(addresses []netbox.IPAddress, soaInfo SOAInfo) []string {
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
 		templateArgs.ZoneName = zone
+
+		soaInfo := defaultSoaInfo
+		masterConf := util.FindMasterForZone(conf, zone)
+		if masterConf != nil {
+			soaInfo.DottedMailResponsible = masterConf.DottedEmail
+			soaInfo.NameserverFQDN = fmt.Sprintf("%s.", masterConf.Name)
+		}
+		templateArgs.SOAInfo = soaInfo
 
 		f, err := os.Create(fmt.Sprintf("./zones/%s.db", zone))
 		if err != nil {

@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"strconv"
+
+	"github.com/jmesserli/netbox-to-bind/config"
 )
 
 func MustConvertToBool(input string) bool {
@@ -49,4 +51,14 @@ func SliceContainsString(slice []string, value string) bool {
 	}
 
 	return false
+}
+
+func FindMasterForZone(conf config.NbbxConfig, zone string) *config.MasterConfig {
+	for _, master := range conf.Masters {
+		if SliceContainsString(master.Zones, zone) {
+			return &master
+		}
+	}
+
+	return nil
 }

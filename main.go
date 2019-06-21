@@ -37,8 +37,8 @@ func main() {
 		Retry:            int(15 * time.Minute / time.Second),
 		TTL:              int(10 * time.Minute / time.Second),
 
-		DottedMailResponsible: "postmaster.peg.nu.",
-		NameserverFQDN:        "vm-ns-1.bue39.pegnu.net.",
-	})
+		DottedMailResponsible: "unknown\\.admin.local",
+		NameserverFQDN:        "unknown-nameserver.local.",
+	}, conf)
 	bind.GenerateConfigs(generatedZones, conf)
 }
