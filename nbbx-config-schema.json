@@ -1,69 +1,68 @@
 {
   "definitions": {},
-  "$schema": "",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "http://example.com/root.json",
   "type": "object",
-  "title": "Configuration Root",
-  "default": null,
-  "required": ["zones"],
+  "title": "The Root Schema",
+  "required": ["masters"],
   "properties": {
-    "zones": {
-      "$id": "#/properties/zones",
+    "masters": {
+      "$id": "#/properties/masters",
       "type": "array",
-      "title": "DNS Zones",
-      "description": "Contains all configured zones",
+      "title": "DNS Masters",
       "default": null,
       "items": {
-        "$id": "#/properties/zones/items",
+        "$id": "#/properties/masters/items",
         "type": "object",
-        "title": "DNS Zone",
-        "description": "Represents a single zone",
+        "title": "DNS Master",
+        "description": "A DNS master server with assigned zones",
         "default": null,
-        "required": ["name", "master", "dotted_mail"],
+        "required": ["name", "ip", "zones"],
         "properties": {
           "name": {
-            "$id": "#/properties/zones/items/properties/name",
+            "$id": "#/properties/masters/items/properties/name",
             "type": "string",
-            "title": "Zone Name",
-            "description": "The name of the DNS zone",
+            "title": "The FQDN of the DNS master",
             "default": "",
-            "examples": ["pegnu.net", "rack.farm", "20.172.in-addr.arpa"],
+            "examples": ["vm-ns-1.bue39.pegnu.net"],
             "pattern": "^(.*)$"
           },
-          "master": {
-            "$id": "#/properties/zones/items/properties/master",
-            "type": "object",
-            "title": "Zone Master",
-            "description": "Configures the SOA record for the zone",
-            "default": null,
-            "required": ["name", "ip"],
-            "properties": {
-              "name": {
-                "$id": "#/properties/zones/items/properties/master/properties/name",
-                "type": "string",
-                "title": "DNS Server Name",
-                "default": "",
-                "examples": ["vm-ns-1.bue39.pegnu.net", "ns1.rack.farm"],
-                "pattern": "^(.*)$"
-              },
-              "ip": {
-                "$id": "#/properties/zones/items/properties/master/properties/ip",
-                "type": "string",
-                "title": "DNS Server IP",
-                "default": "",
-                "examples": ["172.20.20.28", "10.0.0.23"],
-                "pattern": "^(.*)$"
-              }
-            }
+          "ip": {
+            "$id": "#/properties/masters/items/properties/ip",
+            "type": "string",
+            "title": "The IP of the DNS master",
+            "default": "",
+            "examples": ["172.20.20.28"],
+            "pattern": "^(.*)$"
           },
           "dotted_mail": {
-            "$id": "#/properties/zones/items/properties/dotted_mail",
+            "$id": "#/properties/masters/items/properties/dotted_mail",
             "type": "string",
-            "title": "Dotted Administrator Mail",
-            "description": "The email address of the person responsible for the zone",
-            "default": "",
-            "examples": ["admin.peg.nu", "joel\\.messerli.peg.nu"],
+            "title": "Dotted email address",
+            "description": "The mail of the person responsible for all zones this master manages",
+            "default": "admin.rack.farm",
+            "examples": ["admin.peg.nu"],
             "pattern": "^(.*)$"
+          },
+          "zones": {
+            "$id": "#/properties/masters/items/properties/zones",
+            "type": "array",
+            "title": "DNS Zones",
+            "description": "Contains the zones managed by this DNS master",
+            "default": null,
+            "items": {
+              "$id": "#/properties/masters/items/properties/zones/items",
+              "type": "string",
+              "title": "DNS Zone Name",
+              "default": "",
+              "examples": [
+                "pegnu.net",
+                "20.172.in-addr.arpa",
+                "7.0.8.a.8.6.1.0.2.0.a.2.ip6.arpa",
+                "98.99.10.in-addr.arpa"
+              ],
+              "pattern": "^(.*)$"
+            }
           }
         }
       }

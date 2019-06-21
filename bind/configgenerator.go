@@ -16,7 +16,7 @@ type zoneType string
 
 const (
 	slave  zoneType = "slave"
-	master          = "master"
+	master zoneType = "master"
 )
 
 type templateZone struct {
@@ -33,18 +33,7 @@ type configTemplateVars struct {
 	Zones       []templateZone
 }
 
-func GenerateConfigs(zones []string, zoneConfig config.NbbxConfig) {
-	var mastersSet = make(map[config.ZoneMaster]struct{})
-	for _, zone := range zoneConfig.Zones {
-		if _, ok := mastersSet[zone.Master]; !ok {
-			mastersSet[zone.Master] = struct{}{}
-		}
-	}
-	var masterIps = make([]string, 0, len(mastersSet))
-	for master := range mastersSet {
-		masterIps = append(masterIps, master.IP)
-	}
-
+func GenerateConfigs(zones []string, masterConfig config.NbbxConfig) {
 	templateString, err := ioutil.ReadFile("./templates/config.tmpl")
 	if err != nil {
 		panic(err)
@@ -55,43 +44,37 @@ func GenerateConfigs(zones []string, zoneConfig config.NbbxConfig) {
 	templateVars := configTemplateVars{
 		GeneratedAt: time.Now().Format(time.RFC3339),
 	}
-	for currentMaster := range mastersSet {
+	for _, currentMaster := range masterConfig.Masters {
 		templateVars.ServerName = currentMaster.Name
 		templateZones := []templateZone{}
 
-		for _, zone := range zones {
-			var foundZone *config.ZoneConfig
-			for _, configZone := range zoneConfig.Zones {
-				if configZone.Name == zone {
-					foundZone = &configZone
-					break
+		for _, zonesMaster := range masterConfig.Masters {
+			isMaster := zonesMaster.Name == currentMaster.Name
+			masterZoneType := master
+			if !isMaster {
+				masterZoneType = slave
+			}
+
+			for _, zone := range zonesMaster.Zones {
+				if !util.SliceContainsString(zones, zone) {
+					continue
 				}
-			}
 
-			if foundZone == nil {
-				continue
+				templateZones = append(templateZones, templateZone{
+					IsSlave:  !isMaster,
+					MasterIP: zonesMaster.IP,
+					Name:     zone,
+					Type:     masterZoneType,
+				})
 			}
-
-			isMaster := foundZone.Master.Name == currentMaster.Name
-			var zoneType zoneType
-			if isMaster {
-				zoneType = master
-			} else {
-				zoneType = slave
-			}
-			templateZones = append(templateZones, templateZone{
-				Name:     zone,
-				IsSlave:  !isMaster,
-				Type:     zoneType,
-				MasterIP: foundZone.Master.IP,
-			})
 		}
+
 		templateVars.Zones = templateZones
 
-		var masterIPsWithoutCurrent = make([]string, 0, len(masterIps)-1)
-		for _, masterIP := range masterIps {
-			if masterIP != currentMaster.IP {
-				masterIPsWithoutCurrent = append(masterIPsWithoutCurrent, masterIP)
+		var masterIPsWithoutCurrent = make([]string, 0, len(masterConfig.Masters)-1)
+		for _, master := range masterConfig.Masters {
+			if master.IP != currentMaster.IP {
+				masterIPsWithoutCurrent = append(masterIPsWithoutCurrent, master.IP)
 			}
 		}
 		templateVars.MasterIPs = masterIPsWithoutCurrent

@@ -5,19 +5,15 @@ import (
 	"io/ioutil"
 )
 
-type ZoneMaster struct {
-	IP   string `json:"ip"`
-	Name string `json:"name"`
-}
-
-type ZoneConfig struct {
-	Name       string     `json:"name"`
-	Master     ZoneMaster `json:"master"`
-	DottedMail string     `json:"dotted_mail"`
+type MasterConfig struct {
+	Name        string   `json:"name"`
+	IP          string   `json:"ip"`
+	DottedEmail string   `json:"dotted_email"`
+	Zones       []string `json:"zones"`
 }
 
 type NbbxConfig struct {
-	Zones []ZoneConfig `json:"zones"`
+	Masters []MasterConfig `json:"masters"`
 }
 
 func ReadConfig(path string) NbbxConfig {

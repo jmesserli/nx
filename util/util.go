@@ -40,3 +40,13 @@ func CleanDirectory(directory string) {
 		os.RemoveAll(fmt.Sprintf("%s/%s", directory, d.Name()))
 	}
 }
+
+func SliceContainsString(slice []string, value string) bool {
+	for _, entry := range slice {
+		if entry == value {
+			return true
+		}
+	}
+
+	return false
+}
