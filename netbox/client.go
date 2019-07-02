@@ -8,22 +8,30 @@ import (
 	"net/url"
 	"regexp"
 
+	"github.com/jmesserli/nx/config"
 	"github.com/jmesserli/nx/util"
 )
 
-const baseURL = "https://netbox.pegnu.cloud/api"
-const apiKey = "a9ed5b567a4b7de4e9e40ec15bb60edf993b966e"
+type Client struct {
+	conf config.NXConfig
+}
 
-func performGET(path string, query string) []byte {
+func New(conf config.NXConfig) Client {
+	return Client{
+		conf: conf,
+	}
+}
+
+func (c Client) performGET(path string, query string) []byte {
 	if len(query) == 0 {
 		query = "?limit=2000"
 	} else {
 		query = query + "&limit=2000"
 	}
 
-	url := fmt.Sprintf("%v%v%v", baseURL, path, query)
+	url := fmt.Sprintf("%v%v%v", c.conf.Netbox.URL, path, query)
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("Authorization", fmt.Sprintf("Token %v", apiKey))
+	req.Header.Add("Authorization", fmt.Sprintf("Token %v", c.conf.Netbox.ApiKey))
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)
@@ -41,15 +49,15 @@ type ipamPrefixResponse struct {
 }
 
 type GenerateOptions struct {
-	Enabled bool
+	Enabled bool `nx:"enable,ns:dns"`
 
-	ReverseEnabled bool
-	ForwardEnabled bool
+	ReverseEnabled bool `nx:"reverse,ns:dns"`
+	ForwardEnabled bool `nx:"forward,ns:dns"`
 
-	ReverseZoneName string
-	ForwardZoneName string
+	ReverseZoneName string `nx:"reverse_name,ns:dns"`
+	ForwardZoneName string `nx:"forward_name,ns:dns"`
 
-	CNames []string
+	CNames []string `nx:"cname,ns:dns"`
 }
 
 type IPAMPrefix struct {
@@ -117,9 +125,9 @@ func parseGenerateOptions(tags []string, parentPrefix *IPAMPrefix, options *Gene
 	}
 }
 
-func GetIPAMPrefixes() []IPAMPrefix {
+func (c Client) GetIPAMPrefixes() []IPAMPrefix {
 	response := ipamPrefixResponse{}
-	json.Unmarshal(performGET("/ipam/prefixes/", ""), &response)
+	json.Unmarshal(c.performGET("/ipam/prefixes/", ""), &response)
 
 	for i := range response.Results {
 		prefix := &response.Results[i]
@@ -145,9 +153,9 @@ type ipAddressResponse struct {
 	Results []IPAddress `json:"results"`
 }
 
-func GetIPAddressesByPrefix(prefix *IPAMPrefix) []IPAddress {
+func (c Client) GetIPAddressesByPrefix(prefix *IPAMPrefix) []IPAddress {
 	response := ipAddressResponse{}
-	json.Unmarshal(performGET("/ipam/ip-addresses/", fmt.Sprintf("?parent=%s", url.QueryEscape(prefix.Prefix))), &response)
+	json.Unmarshal(c.performGET("/ipam/ip-addresses/", fmt.Sprintf("?parent=%s", url.QueryEscape(prefix.Prefix))), &response)
 
 	for i := range response.Results {
 		address := &response.Results[i]

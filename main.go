@@ -16,15 +16,16 @@ var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
 func main() {
 	conf := config.ReadConfig("./config.json")
 
+	nc := netbox.New(conf)
 	logger.Println("Loading prefixes")
-	prefixes := netbox.GetIPAMPrefixes()
+	prefixes := nc.GetIPAMPrefixes()
 
 	addressList := []netbox.IPAddress{}
 
 	logger.Println("Loading ip addresses of enabled prefixes")
 	for _, prefix := range prefixes {
 		if prefix.GenOptions.Enabled {
-			addresses := netbox.GetIPAddressesByPrefix(&prefix)
+			addresses := nc.GetIPAddressesByPrefix(&prefix)
 			addressList = append(addressList, addresses...)
 		}
 	}

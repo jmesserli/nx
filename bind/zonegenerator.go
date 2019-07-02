@@ -132,7 +132,7 @@ func ipToNibble(cidr string, minimal bool) string {
 }
 
 // GenerateZones generates the BIND zonefiles
-func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf config.NbbxConfig) []string {
+func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf config.NXConfig) []string {
 	t := time.Now()
 
 	if len(defaultSoaInfo.Serial) == 0 {

@@ -5,6 +5,11 @@ import (
 	"io/ioutil"
 )
 
+type NetboxConfig struct {
+	URL    string `json:"url"`
+	ApiKey string `json:"api_key"`
+}
+
 type MasterConfig struct {
 	Name        string   `json:"name"`
 	IP          string   `json:"ip"`
@@ -12,17 +17,26 @@ type MasterConfig struct {
 	Zones       []string `json:"zones"`
 }
 
-type NbbxConfig struct {
+type DNSNamespaceConfig struct {
 	Masters []MasterConfig `json:"masters"`
 }
 
-func ReadConfig(path string) NbbxConfig {
+type NamespaceConfig struct {
+	DNS DNSNamespaceConfig `json:"dns"`
+}
+
+type NXConfig struct {
+	Netbox     NetboxConfig    `json:"netbox"`
+	Namespaces NamespaceConfig `json:"namespaces"`
+}
+
+func ReadConfig(path string) NXConfig {
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
 
-	config := NbbxConfig{}
+	config := NXConfig{}
 	err = json.Unmarshal(fileContent, &config)
 	if err != nil {
 		panic(err)

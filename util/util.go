@@ -53,8 +53,8 @@ func SliceContainsString(slice []string, value string) bool {
 	return false
 }
 
-func FindMasterForZone(conf config.NbbxConfig, zone string) *config.MasterConfig {
-	for _, master := range conf.Masters {
+func FindMasterForZone(conf config.NXConfig, zone string) *config.MasterConfig {
+	for _, master := range conf.Namespaces.DNS.Masters {
 		if SliceContainsString(master.Zones, zone) {
 			return &master
 		}

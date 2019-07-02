@@ -33,7 +33,7 @@ type configTemplateVars struct {
 	Zones       []templateZone
 }
 
-func GenerateConfigs(zones []string, masterConfig config.NbbxConfig) {
+func GenerateConfigs(zones []string, conf config.NXConfig) {
 	templateString, err := ioutil.ReadFile("./templates/config.tmpl")
 	if err != nil {
 		panic(err)
@@ -44,11 +44,11 @@ func GenerateConfigs(zones []string, masterConfig config.NbbxConfig) {
 	templateVars := configTemplateVars{
 		GeneratedAt: time.Now().Format(time.RFC3339),
 	}
-	for _, currentMaster := range masterConfig.Masters {
+	for _, currentMaster := range conf.Namespaces.DNS.Masters {
 		templateVars.ServerName = currentMaster.Name
 		templateZones := []templateZone{}
 
-		for _, zonesMaster := range masterConfig.Masters {
+		for _, zonesMaster := range conf.Namespaces.DNS.Masters {
 			isMaster := zonesMaster.Name == currentMaster.Name
 			masterZoneType := master
 			if !isMaster {
@@ -71,8 +71,8 @@ func GenerateConfigs(zones []string, masterConfig config.NbbxConfig) {
 
 		templateVars.Zones = templateZones
 
-		var masterIPsWithoutCurrent = make([]string, 0, len(masterConfig.Masters)-1)
-		for _, master := range masterConfig.Masters {
+		var masterIPsWithoutCurrent = make([]string, 0, len(conf.Namespaces.DNS.Masters)-1)
+		for _, master := range conf.Namespaces.DNS.Masters {
 			if master.IP != currentMaster.IP {
 				masterIPsWithoutCurrent = append(masterIPsWithoutCurrent, master.IP)
 			}
