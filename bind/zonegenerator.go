@@ -11,10 +11,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/jmesserli/netbox-to-bind/config"
+	"github.com/jmesserli/nx/config"
 
-	"github.com/jmesserli/netbox-to-bind/netbox"
-	"github.com/jmesserli/netbox-to-bind/util"
+	"github.com/jmesserli/nx/netbox"
+	"github.com/jmesserli/nx/util"
 )
 
 var logger = log.New(os.Stdout, "[generator] ", log.LstdFlags)
@@ -198,7 +198,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		panic(err)
 	}
 	zoneTemplate := template.Must(template.New("zone").Parse(string(templateString)))
-	util.CleanDirectory("./zones")
+	util.CleanDirectory("./generated/zones")
 
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
@@ -212,7 +212,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		}
 		templateArgs.SOAInfo = soaInfo
 
-		f, err := os.Create(fmt.Sprintf("./zones/%s.db", zone))
+		f, err := os.Create(fmt.Sprintf("./generated/zones/%s.db", zone))
 		if err != nil {
 			panic(err)
 		}

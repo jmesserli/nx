@@ -7,9 +7,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/jmesserli/netbox-to-bind/util"
+	"github.com/jmesserli/nx/util"
 
-	"github.com/jmesserli/netbox-to-bind/config"
+	"github.com/jmesserli/nx/config"
 )
 
 type zoneType string
@@ -39,7 +39,7 @@ func GenerateConfigs(zones []string, masterConfig config.NbbxConfig) {
 		panic(err)
 	}
 	configTemplate := template.Must(template.New("config").Parse(string(templateString)))
-	util.CleanDirectory("./bind-config")
+	util.CleanDirectory("./generated/bind-config")
 
 	templateVars := configTemplateVars{
 		GeneratedAt: time.Now().Format(time.RFC3339),
@@ -79,7 +79,7 @@ func GenerateConfigs(zones []string, masterConfig config.NbbxConfig) {
 		}
 		templateVars.MasterIPs = masterIPsWithoutCurrent
 
-		f, err := os.Create(fmt.Sprintf("./bind-config/%s.conf", currentMaster.Name))
+		f, err := os.Create(fmt.Sprintf("./generated/bind-config/%s.conf", currentMaster.Name))
 		if err != nil {
 			panic(err)
 		}

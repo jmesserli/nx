@@ -3,7 +3,7 @@ package bind
 import (
 	"testing"
 
-	"github.com/jmesserli/netbox-to-bind/netbox"
+	"github.com/jmesserli/nx/netbox"
 )
 
 func TestDomainNormalizing(t *testing.T) {

@@ -5,10 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/jmesserli/netbox-to-bind/config"
+	"github.com/jmesserli/nx/config"
 
-	"github.com/jmesserli/netbox-to-bind/bind"
-	"github.com/jmesserli/netbox-to-bind/netbox"
+	"github.com/jmesserli/nx/bind"
+	"github.com/jmesserli/nx/netbox"
 )
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)

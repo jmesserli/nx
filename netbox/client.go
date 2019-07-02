@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/jmesserli/netbox-to-bind/util"
+	"github.com/jmesserli/nx/util"
 )
 
 const baseURL = "https://netbox.pegnu.cloud/api"

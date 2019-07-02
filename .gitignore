@@ -1,4 +1,3 @@
-zones/
-bind-config/
+generated/
 
 config.json

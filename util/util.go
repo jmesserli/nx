@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/jmesserli/netbox-to-bind/config"
+	"github.com/jmesserli/nx/config"
 )
 
 func MustConvertToBool(input string) bool {
