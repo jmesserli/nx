@@ -144,7 +144,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 
 	var zoneRecordsMap = make(map[string][]resourceRecord)
 	for _, address := range addresses {
-		if !address.GenOptions.Enabled || !(address.GenOptions.ReverseEnabled || address.GenOptions.ForwardEnabled) {
+		if !address.GenOptions.Enabled {
 			continue
 		}
 
@@ -153,7 +153,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		ip, _, _ := net.ParseCIDR(address.Address)
 		isIP4 := (strings.Count(ip.String(), ":") < 2)
 
-		if address.GenOptions.ForwardEnabled && len(address.GenOptions.ForwardZoneName) > 0 {
+		if len(address.GenOptions.ForwardZoneName) > 0 {
 			var recordType rrType
 			if isIP4 {
 				recordType = A
@@ -176,7 +176,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 			}
 		}
 
-		if address.GenOptions.ReverseEnabled && len(address.GenOptions.ReverseZoneName) > 0 {
+		if len(address.GenOptions.ReverseZoneName) > 0 {
 			zoneName := ipToNibble(address.GenOptions.ReverseZoneName, true)
 
 			name := ipToNibble(address.Address, false)

@@ -6,10 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"regexp"
 
 	"github.com/jmesserli/nx/config"
-	"github.com/jmesserli/nx/util"
+	"github.com/jmesserli/nx/tagparser"
 )
 
 type Client struct {
@@ -51,11 +50,8 @@ type ipamPrefixResponse struct {
 type GenerateOptions struct {
 	Enabled bool `nx:"enable,ns:dns"`
 
-	ReverseEnabled bool `nx:"reverse,ns:dns"`
-	ForwardEnabled bool `nx:"forward,ns:dns"`
-
-	ReverseZoneName string `nx:"reverse_name,ns:dns"`
-	ForwardZoneName string `nx:"forward_name,ns:dns"`
+	ReverseZoneName string `nx:"reverse_zone,ns:dns"`
+	ForwardZoneName string `nx:"forward_zone,ns:dns"`
 
 	CNames []string `nx:"cname,ns:dns"`
 }
@@ -68,61 +64,12 @@ type IPAMPrefix struct {
 	GenOptions GenerateOptions
 }
 
-var enabledRegex = regexp.MustCompile("nbbx_enabled?:(true|false)")
-var reverseEnabledRegex = regexp.MustCompile("nbbx_reverse(?:_enabled?)?:(true|false)")
-var forwardEnabledRegex = regexp.MustCompile("nbbx_forward(?:_enabled?)?:(true|false)")
-var forwardZoneRegex = regexp.MustCompile("nbbx_forward_zone:(.+)")
-var reverseZoneRegex = regexp.MustCompile("nbbx_reverse_zone:(.+)")
-var cnameRegex = regexp.MustCompile("nbbx_cname:(.+)")
-
 func parseGenerateOptions(tags []string, parentPrefix *IPAMPrefix, options *GenerateOptions) {
+	pTags := []string{}
 	if parentPrefix != nil {
-		pOptions := parentPrefix.GenOptions
-
-		options.Enabled = pOptions.Enabled
-		options.ForwardEnabled = pOptions.ForwardEnabled
-		options.ReverseEnabled = pOptions.ReverseEnabled
-		options.ForwardZoneName = pOptions.ForwardZoneName
-		options.ReverseZoneName = pOptions.ReverseZoneName
+		pTags = parentPrefix.Tags
 	}
-	options.CNames = []string{}
-
-	for _, tag := range tags {
-		matches := enabledRegex.FindStringSubmatch(tag)
-		if matches != nil {
-			options.Enabled = util.MustConvertToBool(matches[1])
-			continue
-		}
-
-		matches = reverseEnabledRegex.FindStringSubmatch(tag)
-		if matches != nil {
-			options.ReverseEnabled = util.MustConvertToBool(matches[1])
-			continue
-		}
-
-		matches = forwardEnabledRegex.FindStringSubmatch(tag)
-		if matches != nil {
-			options.ForwardEnabled = util.MustConvertToBool(matches[1])
-			continue
-		}
-
-		matches = reverseZoneRegex.FindStringSubmatch(tag)
-		if matches != nil {
-			options.ReverseZoneName = matches[1]
-			continue
-		}
-
-		matches = forwardZoneRegex.FindStringSubmatch(tag)
-		if matches != nil {
-			options.ForwardZoneName = matches[1]
-			continue
-		}
-
-		matches = cnameRegex.FindStringSubmatch(tag)
-		if matches != nil {
-			options.CNames = append(options.CNames, matches[1])
-		}
-	}
+	tagparser.ParseTags(options, tags, pTags)
 }
 
 func (c Client) GetIPAMPrefixes() []IPAMPrefix {

@@ -7,9 +7,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/jmesserli/nx/util"
-
 	"github.com/jmesserli/nx/config"
+	"github.com/jmesserli/nx/util"
 )
 
 type zoneType string

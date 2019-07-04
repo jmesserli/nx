@@ -2,7 +2,6 @@ package tagparser
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -69,7 +68,7 @@ func ParseTags(data interface{}, tags, parentTags []string) {
 			value, err = findValueForField(field, parentTags)
 
 			if err != nil {
-				fmt.Printf("warn: No values for field <%s> found", field.sField.Name)
+				//fmt.Printf("warn: No values for field <%s> found\n", field.sField.Name)
 				continue
 			}
 		}
@@ -119,18 +118,17 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 		}
 	} else if fKind == reflect.String {
 		if len(strValues) == 0 {
-			fmt.Printf("warn: No values available for string field <%s>. Returning empty string.\n", field.sField.Name)
+			//fmt.Printf("warn: No values available for string field <%s>. Returning empty string.\n", field.sField.Name)
 			return "", fmt.Errorf("No value available")
 		}
 
 		return strValues[0], nil
 	} else if fKind == reflect.Int {
 		if len(strValues) == 0 {
-			fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
+			//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
 			return 0, fmt.Errorf("No value available")
 		}
 
-		var iVal = math.MinInt32
 		for _, val := range strValues {
 			i, err := strconv.Atoi(val)
 			if err != nil {
@@ -138,14 +136,29 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 				continue
 			}
 
-			iVal = i
-			break
+			return i, nil
 		}
-		if iVal == math.MinInt32 {
-			fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-			return 0, fmt.Errorf("No value available")
+
+		//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
+		return 0, fmt.Errorf("No value available")
+	} else if fKind == reflect.Bool {
+		if len(strValues) == 0 {
+			//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
+			return false, fmt.Errorf("No value available")
 		}
-		return iVal, nil
+
+		for _, val := range strValues {
+			b, err := strconv.ParseBool(val)
+			if err != nil {
+				fmt.Printf("warn: could not parse <%v> as bool for field <%v>. Trying next value (if any).\n", val, field.sField.Name)
+				continue
+			}
+
+			return b, nil
+		}
+
+		//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
+		return false, fmt.Errorf("No value available")
 	}
 
 	panic(fmt.Sprintf("Unsupported field type <%v>", fKind))
