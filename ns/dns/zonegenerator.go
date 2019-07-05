@@ -191,6 +191,11 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		if len(dnsIP.ReverseZoneName) > 0 {
 			zoneName := ipToNibble(dnsIP.ReverseZoneName, true)
 
+			if len(dnsIP.ForwardZoneName) == 0 {
+				// Parse parent tags to restore forward zone name
+				tagparser.ParseTags(&dnsIP, address.Prefix.Tags, []string{})
+			}
+
 			name := ipToNibble(address.Address, false)
 			name = name[:len(name)-len(zoneName)-1]
 			putMap(zoneRecordsMap, zoneName, resourceRecord{
