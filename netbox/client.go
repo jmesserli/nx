@@ -48,8 +48,8 @@ type ipamPrefixResponse struct {
 }
 
 type EnableOptions struct {
-	DNSEnabled bool `nx:"enable,ns:dns"`
-	WGEnabled  bool `nx:"mesh,ns:wg"`
+	DNSEnabled bool   `nx:"enable,ns:dns"`
+	WGVpnName  string `nx:"mesh,ns:wg"`
 }
 
 type IPAMPrefix struct {

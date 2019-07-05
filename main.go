@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/jmesserli/nx/ns/wg"
+
 	"github.com/jmesserli/nx/config"
 	"github.com/jmesserli/nx/netbox"
 	"github.com/jmesserli/nx/ns/dns"
@@ -24,7 +26,7 @@ func main() {
 
 	logger.Println("Loading ip addresses of enabled prefixes")
 	for _, prefix := range prefixes {
-		if !(prefix.EnOptions.DNSEnabled || prefix.EnOptions.WGEnabled) {
+		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0) {
 			continue
 		}
 
@@ -32,7 +34,7 @@ func main() {
 		if prefix.EnOptions.DNSEnabled {
 			dnsIps = append(dnsIps, addresses...)
 		}
-		if prefix.EnOptions.WGEnabled {
+		if len(prefix.EnOptions.WGVpnName) > 0 {
 			wgIps = append(wgIps, addresses...)
 		}
 	}
@@ -51,4 +53,6 @@ func main() {
 
 	logger.Println("Generating BIND config files")
 	dns.GenerateConfigs(generatedZones, conf)
+	logger.Println("Generating Wireguard config files")
+	wg.GenerateWgConfigs(wgIps)
 }

@@ -14,11 +14,12 @@ Table = off
 {{ range $peer := .Peers -}}
 [Peer]
 # Peer {{ $peer.Name }}
+Endpoint = {{ $peer.IP }}:{{ $peer.Port }}
 PublicKey = {{ $peer.PublicKey }}
 AllowedIps = 0.0.0.0/0
 PersistentKeepalive = 25
 
-{{ end }}
+{{ end -}}
 #
 # End of config for VPN server {{ .ServerName }}
 #
