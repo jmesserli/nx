@@ -1,4 +1,4 @@
-package bind
+package dns
 
 import (
 	"testing"

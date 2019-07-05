@@ -1,4 +1,4 @@
-package bind
+package dns
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ type configTemplateVars struct {
 }
 
 func GenerateConfigs(zones []string, conf config.NXConfig) {
-	templateString, err := ioutil.ReadFile("./templates/config.tmpl")
+	templateString, err := ioutil.ReadFile("./templates/bind-config.tmpl")
 	if err != nil {
 		panic(err)
 	}

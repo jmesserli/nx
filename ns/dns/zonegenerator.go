@@ -1,4 +1,4 @@
-package bind
+package dns
 
 import (
 	"fmt"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/jmesserli/nx/config"
-
 	"github.com/jmesserli/nx/netbox"
+	"github.com/jmesserli/nx/tagparser"
 	"github.com/jmesserli/nx/util"
 )
 
@@ -31,18 +31,27 @@ type SOAInfo struct {
 	Serial                string
 }
 
+type DNSIP struct {
+	IP *netbox.IPAddress
+
+	Enabled         bool     `nx:"enable,ns:dns"`
+	ReverseZoneName string   `nx:"reverse_zone,ns:dns"`
+	ForwardZoneName string   `nx:"forward_zone,ns:dns"`
+	CNames          []string `nx:"cname,ns:dns"`
+}
+
 var unknownNameCounter = 1
 
-func FixFlattenAddress(address *netbox.IPAddress) {
-	originalName := address.Name
+func FixFlattenAddress(address *DNSIP) {
+	originalName := address.IP.Name
 	// remove everyting after the first space
-	address.Name = strings.Split(strings.ToLower(originalName), " ")[0]
-	if len(address.Name) == 0 {
-		address.Name = fmt.Sprintf("unknown-static-%v", unknownNameCounter)
+	address.IP.Name = strings.Split(strings.ToLower(originalName), " ")[0]
+	if len(address.IP.Name) == 0 {
+		address.IP.Name = fmt.Sprintf("unknown-static-%v", unknownNameCounter)
 		unknownNameCounter++
 	}
 
-	originalZone := address.GenOptions.ForwardZoneName
+	originalZone := address.ForwardZoneName
 	if len(originalZone) == 0 {
 		return
 	}
@@ -54,19 +63,19 @@ func FixFlattenAddress(address *netbox.IPAddress) {
 		cutoff = strings.Join(zoneParts[:len(zoneParts)-2], ".")
 		shortZone = originalZone[len(cutoff)+1:]
 	}
-	address.GenOptions.ForwardZoneName = shortZone
+	address.ForwardZoneName = shortZone
 
-	if strings.HasSuffix(address.Name, originalZone) {
+	if strings.HasSuffix(address.IP.Name, originalZone) {
 		// remove suffix from name
-		address.Name = address.Name[:len(address.Name)-len(originalZone)-1]
+		address.IP.Name = address.IP.Name[:len(address.IP.Name)-len(originalZone)-1]
 	}
 
 	if len(cutoff) > 0 {
 		// append the zone cutoff to the name
-		address.Name = fmt.Sprintf("%s.%s", address.Name, cutoff)
+		address.IP.Name = fmt.Sprintf("%s.%s", address.IP.Name, cutoff)
 	}
 
-	logger.Printf("(%s).%s -> (%s).%s\n", originalName, originalZone, address.Name, shortZone)
+	logger.Printf("(%s).%s -> (%s).%s\n", originalName, originalZone, address.IP.Name, shortZone)
 }
 
 type rrType string
@@ -144,16 +153,19 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 
 	var zoneRecordsMap = make(map[string][]resourceRecord)
 	for _, address := range addresses {
-		if !address.GenOptions.Enabled {
+		dnsIP := DNSIP{IP: &address}
+		tagparser.ParseTags(&dnsIP, address.Tags, address.Prefix.Tags)
+
+		if !dnsIP.Enabled {
 			continue
 		}
 
-		FixFlattenAddress(&address)
+		FixFlattenAddress(&dnsIP)
 
 		ip, _, _ := net.ParseCIDR(address.Address)
 		isIP4 := (strings.Count(ip.String(), ":") < 2)
 
-		if len(address.GenOptions.ForwardZoneName) > 0 {
+		if len(dnsIP.ForwardZoneName) > 0 {
 			var recordType rrType
 			if isIP4 {
 				recordType = A
@@ -161,14 +173,14 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 				recordType = Aaaa
 			}
 
-			putMap(zoneRecordsMap, address.GenOptions.ForwardZoneName, resourceRecord{
+			putMap(zoneRecordsMap, dnsIP.ForwardZoneName, resourceRecord{
 				Name:  address.Name,
 				Type:  recordType,
 				RData: ip.String(),
 			})
 
-			for _, cname := range address.GenOptions.CNames {
-				putMap(zoneRecordsMap, address.GenOptions.ForwardZoneName, resourceRecord{
+			for _, cname := range dnsIP.CNames {
+				putMap(zoneRecordsMap, dnsIP.ForwardZoneName, resourceRecord{
 					Name:  cname,
 					Type:  CName,
 					RData: address.Name,
@@ -176,15 +188,15 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 			}
 		}
 
-		if len(address.GenOptions.ReverseZoneName) > 0 {
-			zoneName := ipToNibble(address.GenOptions.ReverseZoneName, true)
+		if len(dnsIP.ReverseZoneName) > 0 {
+			zoneName := ipToNibble(dnsIP.ReverseZoneName, true)
 
 			name := ipToNibble(address.Address, false)
 			name = name[:len(name)-len(zoneName)-1]
 			putMap(zoneRecordsMap, zoneName, resourceRecord{
 				Name:  name,
 				Type:  Ptr,
-				RData: fmt.Sprintf("%s.%s.", address.Name, address.GenOptions.ForwardZoneName),
+				RData: fmt.Sprintf("%s.%s.", address.Name, dnsIP.ForwardZoneName),
 			})
 		}
 	}
@@ -193,7 +205,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		GeneratedAt: t.Format(time.RFC3339),
 	}
 
-	templateString, err := ioutil.ReadFile("./templates/zone.tmpl")
+	templateString, err := ioutil.ReadFile("./templates/bind-zone.tmpl")
 	if err != nil {
 		panic(err)
 	}

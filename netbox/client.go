@@ -47,13 +47,9 @@ type ipamPrefixResponse struct {
 	Results []IPAMPrefix `json:"results"`
 }
 
-type GenerateOptions struct {
-	Enabled bool `nx:"enable,ns:dns"`
-
-	ReverseZoneName string `nx:"reverse_zone,ns:dns"`
-	ForwardZoneName string `nx:"forward_zone,ns:dns"`
-
-	CNames []string `nx:"cname,ns:dns"`
+type EnableOptions struct {
+	DNSEnabled bool `nx:"enable,ns:dns"`
+	WGEnabled  bool `nx:"mesh,ns:wg"`
 }
 
 type IPAMPrefix struct {
@@ -61,15 +57,7 @@ type IPAMPrefix struct {
 	Prefix string   `json:"prefix"`
 	Tags   []string `json:"tags"`
 
-	GenOptions GenerateOptions
-}
-
-func parseGenerateOptions(tags []string, parentPrefix *IPAMPrefix, options *GenerateOptions) {
-	pTags := []string{}
-	if parentPrefix != nil {
-		pTags = parentPrefix.Tags
-	}
-	tagparser.ParseTags(options, tags, pTags)
+	EnOptions EnableOptions
 }
 
 func (c Client) GetIPAMPrefixes() []IPAMPrefix {
@@ -78,9 +66,9 @@ func (c Client) GetIPAMPrefixes() []IPAMPrefix {
 
 	for i := range response.Results {
 		prefix := &response.Results[i]
-		prefix.GenOptions = GenerateOptions{}
+		prefix.EnOptions = EnableOptions{}
 
-		parseGenerateOptions(prefix.Tags, nil, &prefix.GenOptions)
+		tagparser.ParseTags(&prefix.EnOptions, prefix.Tags, []string{})
 	}
 
 	return response.Results
@@ -91,8 +79,7 @@ type IPAddress struct {
 	Address string   `json:"address"`
 	Name    string   `json:"description"`
 	Tags    []string `json:"tags"`
-
-	GenOptions GenerateOptions
+	Prefix  *IPAMPrefix
 }
 
 type ipAddressResponse struct {
@@ -100,15 +87,13 @@ type ipAddressResponse struct {
 	Results []IPAddress `json:"results"`
 }
 
-func (c Client) GetIPAddressesByPrefix(prefix *IPAMPrefix) []IPAddress {
+func (c Client) GetIPAddressesByPrefix(prefix IPAMPrefix) []IPAddress {
 	response := ipAddressResponse{}
 	json.Unmarshal(c.performGET("/ipam/ip-addresses/", fmt.Sprintf("?parent=%s", url.QueryEscape(prefix.Prefix))), &response)
 
 	for i := range response.Results {
-		address := &response.Results[i]
-		address.GenOptions = GenerateOptions{}
-
-		parseGenerateOptions(address.Tags, prefix, &address.GenOptions)
+		ip := &response.Results[i]
+		ip.Prefix = &prefix
 	}
 
 	return response.Results

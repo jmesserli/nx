@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/jmesserli/nx/config"
-
-	"github.com/jmesserli/nx/bind"
 	"github.com/jmesserli/nx/netbox"
+	"github.com/jmesserli/nx/ns/dns"
 )
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
@@ -20,18 +19,26 @@ func main() {
 	logger.Println("Loading prefixes")
 	prefixes := nc.GetIPAMPrefixes()
 
-	addressList := []netbox.IPAddress{}
+	dnsIps := []netbox.IPAddress{}
+	wgIps := []netbox.IPAddress{}
 
 	logger.Println("Loading ip addresses of enabled prefixes")
 	for _, prefix := range prefixes {
-		if prefix.GenOptions.Enabled {
-			addresses := nc.GetIPAddressesByPrefix(&prefix)
-			addressList = append(addressList, addresses...)
+		if !(prefix.EnOptions.DNSEnabled || prefix.EnOptions.WGEnabled) {
+			continue
+		}
+
+		addresses := nc.GetIPAddressesByPrefix(prefix)
+		if prefix.EnOptions.DNSEnabled {
+			dnsIps = append(dnsIps, addresses...)
+		}
+		if prefix.EnOptions.WGEnabled {
+			wgIps = append(wgIps, addresses...)
 		}
 	}
 
-	logger.Println("Generating zone files")
-	generatedZones := bind.GenerateZones(addressList, bind.SOAInfo{
+	logger.Println("Generating dns zone files")
+	generatedZones := dns.GenerateZones(dnsIps, dns.SOAInfo{
 		BindDefaultRRTTL: int(2 * time.Minute / time.Second),
 		Expire:           int(48 * time.Hour / time.Second),
 		Refresh:          int(15 * time.Minute / time.Second),
@@ -41,5 +48,7 @@ func main() {
 		DottedMailResponsible: "unknown\\.admin.local",
 		NameserverFQDN:        "unknown-nameserver.local.",
 	}, conf)
-	bind.GenerateConfigs(generatedZones, conf)
+
+	logger.Println("Generating BIND config files")
+	dns.GenerateConfigs(generatedZones, conf)
 }
