@@ -32,14 +32,19 @@ func ExpandIPv6(ip net.IP) string {
 	return string(dst)
 }
 
-func CleanDirectory(directory string) {
-	// clean zone directory
-	dir, err := ioutil.ReadDir(directory)
+func CleanDirectoryExcept(directory string, exceptions []string) {
+	fileInfos, err := ioutil.ReadDir(directory)
 	if err != nil {
 		panic(err)
 	}
-	for _, d := range dir {
-		os.RemoveAll(fmt.Sprintf("%s/%s", directory, d.Name()))
+
+	for _, fileInfo := range fileInfos {
+		name := fmt.Sprintf("%s/%s", directory, fileInfo.Name())
+		if SliceContainsString(exceptions, name) {
+			continue
+		}
+
+		_ = os.RemoveAll(name)
 	}
 }
 

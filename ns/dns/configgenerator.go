@@ -34,13 +34,12 @@ type configTemplateVars struct {
 }
 
 func GenerateConfigs(zones []string, conf config.NXConfig) {
-	templateString, err := ioutil.ReadFile("./templates/bind-config.tmpl")
+	templateString, err := ioutil.ReadFile("templates/bind-config.tmpl")
 	if err != nil {
 		panic(err)
 	}
 	configTemplate := template.Must(template.New("config").Parse(string(templateString)))
-	util.CleanDirectory("./generated/bind-config")
-	cw := cache.New("./generated/hashes/bind-config.json")
+	cw := cache.New("generated/hashes/bind-config.json")
 	ignoreRegex := regexp.MustCompile("(?m)^ \\* Generated at.*$")
 
 	templateVars := configTemplateVars{
@@ -82,7 +81,7 @@ func GenerateConfigs(zones []string, conf config.NXConfig) {
 		templateVars.MasterIPs = masterIPsWithoutCurrent
 
 		_, err = cw.WriteTemplate(
-			fmt.Sprintf("./generated/bind-config/%s.conf", currentMaster.Name),
+			fmt.Sprintf("generated/bind-config/%s.conf", currentMaster.Name),
 			configTemplate,
 			templateVars,
 			[]*regexp.Regexp{ignoreRegex},
@@ -91,6 +90,8 @@ func GenerateConfigs(zones []string, conf config.NXConfig) {
 		if err != nil {
 			panic(err)
 		}
+
+		util.CleanDirectoryExcept("generated/bind-config", cw.ProcessedFiles)
 	}
 
 }

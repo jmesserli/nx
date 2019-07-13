@@ -211,13 +211,13 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		GeneratedAt: t.Format(time.RFC3339),
 	}
 
-	templateString, err := ioutil.ReadFile("./templates/bind-zone.tmpl")
+	templateString, err := ioutil.ReadFile("templates/bind-zone.tmpl")
 	if err != nil {
 		panic(err)
 	}
 	zoneTemplate := template.Must(template.New("zone").Parse(string(templateString)))
-	util.CleanDirectory("./generated/zones")
-	cw := cache.New("./generated/hashes/zones.json")
+
+	cw := cache.New("generated/hashes/zones.json")
 	ignoreRegex := regexp.MustCompile("(?m)^(\\s+\\d+\\s+; serial.*|; Generated at .*)$")
 
 	for zone, records := range zoneRecordsMap {
@@ -233,7 +233,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		templateArgs.SOAInfo = soaInfo
 
 		_, err := cw.WriteTemplate(
-			fmt.Sprintf("./generated/zones/%s.db", zone),
+			fmt.Sprintf("generated/zones/%s.db", zone),
 			zoneTemplate,
 			templateArgs,
 			[]*regexp.Regexp{ignoreRegex},
@@ -243,6 +243,8 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 			panic(err)
 		}
 	}
+
+	util.CleanDirectoryExcept("generated/zones", cw.ProcessedFiles)
 
 	zones := make([]string, 0, len(zoneRecordsMap))
 	for key := range zoneRecordsMap {

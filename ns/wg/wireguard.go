@@ -3,13 +3,13 @@ package wg
 import (
 	"fmt"
 	"github.com/jmesserli/nx/cache"
+	"github.com/jmesserli/nx/util"
 	"io/ioutil"
 	"regexp"
 	"text/template"
 
 	"github.com/jmesserli/nx/netbox"
 	"github.com/jmesserli/nx/tagparser"
-	"github.com/jmesserli/nx/util"
 )
 
 type templatePeer struct {
@@ -57,13 +57,12 @@ func GenerateWgConfigs(ips []netbox.IPAddress) {
 		putMap(vpnPeers, ip.Prefix.EnOptions.WGVpnName, parsedIp{IP: ip, peer: peer})
 	}
 
-	templateString, err := ioutil.ReadFile("./templates/wg-config.tmpl")
+	templateString, err := ioutil.ReadFile("templates/wg-config.tmpl")
 	if err != nil {
 		panic(err)
 	}
 	zoneTemplate := template.Must(template.New("wg-config").Parse(string(templateString)))
-	util.CleanDirectory("./generated/wg")
-	cw := cache.New("./generated/hashes/wg.json")
+	cw := cache.New("generated/hashes/wg.json")
 
 	for vpnName, peers := range vpnPeers {
 		for _, peer := range peers {
@@ -82,7 +81,7 @@ func GenerateWgConfigs(ips []netbox.IPAddress) {
 			}
 
 			_, err := cw.WriteTemplate(
-				fmt.Sprintf("./generated/wg/%s_%s.conf", vpnName, data.ServerName),
+				fmt.Sprintf("generated/wg/%s_%s.conf", vpnName, data.ServerName),
 				zoneTemplate,
 				data,
 				[]*regexp.Regexp{},
@@ -93,4 +92,6 @@ func GenerateWgConfigs(ips []netbox.IPAddress) {
 			}
 		}
 	}
+
+	util.CleanDirectoryExcept("generated/wg", cw.ProcessedFiles)
 }

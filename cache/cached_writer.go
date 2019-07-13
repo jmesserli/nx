@@ -17,9 +17,10 @@ import (
 var logger = log.New(os.Stdout, "[cached_writer] ", log.LstdFlags)
 
 type CachedTemplateWriter struct {
-	hashFile   string
-	fileHashes map[string]string
-	buf        bytes.Buffer
+	hashFile       string
+	fileHashes     map[string]string
+	buf            bytes.Buffer
+	ProcessedFiles []string
 }
 
 func New(hashFile string) *CachedTemplateWriter {
@@ -75,6 +76,7 @@ func (w *CachedTemplateWriter) WriteTemplate(
 	existingHash, ok := w.fileHashes[file]
 	if ok && existingHash == hashStr {
 		logger.Printf("File fresh: %s\n", file)
+		w.ProcessedFiles = append(w.ProcessedFiles, file)
 		return false, nil
 	}
 
@@ -106,6 +108,7 @@ func (w *CachedTemplateWriter) WriteTemplate(
 	}
 
 	logger.Printf("New hash %s for file %s\n", hashStr, file)
+	w.ProcessedFiles = append(w.ProcessedFiles, file)
 	w.fileHashes[file] = hashStr
 	w.updateJson()
 
