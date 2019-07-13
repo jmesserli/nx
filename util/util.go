@@ -4,12 +4,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"strconv"
 
 	"github.com/jmesserli/nx/config"
 )
+
+var logger = log.New(os.Stdout, "[util] ", log.LstdFlags)
 
 func MustConvertToBool(input string) bool {
 	value, _ := strconv.ParseBool(input)
@@ -44,6 +47,7 @@ func CleanDirectoryExcept(directory string, exceptions []string) {
 			continue
 		}
 
+		logger.Printf("Removing file %s\n", name)
 		_ = os.RemoveAll(name)
 	}
 }

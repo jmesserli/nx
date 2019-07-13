@@ -90,8 +90,7 @@ func GenerateConfigs(zones []string, conf config.NXConfig) {
 		if err != nil {
 			panic(err)
 		}
-
-		util.CleanDirectoryExcept("generated/bind-config", cw.ProcessedFiles)
 	}
 
+	util.CleanDirectoryExcept("generated/bind-config", cw.ProcessedFiles)
 }
