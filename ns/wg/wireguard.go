@@ -2,8 +2,9 @@ package wg
 
 import (
 	"fmt"
+	"github.com/jmesserli/nx/cache"
 	"io/ioutil"
-	"os"
+	"regexp"
 	"text/template"
 
 	"github.com/jmesserli/nx/netbox"
@@ -62,6 +63,7 @@ func GenerateWgConfigs(ips []netbox.IPAddress) {
 	}
 	zoneTemplate := template.Must(template.New("wg-config").Parse(string(templateString)))
 	util.CleanDirectory("./generated/wg")
+	cw := cache.New("./generated/hashes/wg.json")
 
 	for vpnName, peers := range vpnPeers {
 		for _, peer := range peers {
@@ -79,14 +81,16 @@ func GenerateWgConfigs(ips []netbox.IPAddress) {
 				Peers:      peersWithoutCurrent,
 			}
 
-			f, err := os.Create(fmt.Sprintf("./generated/wg/%s_%s.conf", vpnName, data.ServerName))
+			_, err := cw.WriteTemplate(
+				fmt.Sprintf("./generated/wg/%s_%s.conf", vpnName, data.ServerName),
+				zoneTemplate,
+				data,
+				[]*regexp.Regexp{},
+				false,
+			)
 			if err != nil {
 				panic(err)
 			}
-			defer f.Close()
-
-			zoneTemplate.Execute(f, data)
 		}
 	}
-
 }

@@ -119,14 +119,14 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 	} else if fKind == reflect.String {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for string field <%s>. Returning empty string.\n", field.sField.Name)
-			return "", fmt.Errorf("No value available")
+			return "", fmt.Errorf("No value available.")
 		}
 
 		return strValues[0], nil
 	} else if fKind == reflect.Int {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-			return 0, fmt.Errorf("No value available")
+			return 0, fmt.Errorf("No value available.")
 		}
 
 		for _, val := range strValues {
@@ -140,11 +140,11 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 		}
 
 		//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-		return 0, fmt.Errorf("No value available")
+		return 0, fmt.Errorf("No value available.")
 	} else if fKind == reflect.Bool {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
-			return false, fmt.Errorf("No value available")
+			return false, fmt.Errorf("No value available.")
 		}
 
 		for _, val := range strValues {
@@ -158,7 +158,7 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 		}
 
 		//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
-		return false, fmt.Errorf("No value available")
+		return false, fmt.Errorf("No value available.")
 	}
 
 	panic(fmt.Sprintf("Unsupported field type <%v>", fKind))

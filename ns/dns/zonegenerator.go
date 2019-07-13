@@ -2,12 +2,13 @@ package dns
 
 import (
 	"fmt"
+	"github.com/jmesserli/nx/cache"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
+	"regexp"
 	"strings"
-	"text/tabwriter"
 	"text/template"
 	"time"
 
@@ -115,14 +116,14 @@ func putMap(theMap map[string][]resourceRecord, key string, value resourceRecord
 }
 
 func ipToNibble(cidr string, minimal bool) string {
-	ip, net, _ := net.ParseCIDR(cidr)
-	isIP4 := (strings.Count(ip.String(), ":") < 2)
+	ip, ipNet, _ := net.ParseCIDR(cidr)
+	isIP4 := strings.Count(ip.String(), ":") < 2
 
 	if isIP4 {
 		split := strings.Split(ip.String(), ".")
 		reverse := util.ReverseSlice(split)
 		if minimal {
-			prefixSize, _ := net.Mask.Size()
+			prefixSize, _ := ipNet.Mask.Size()
 			prefixParts := prefixSize / 8
 			reverse = reverse[len(reverse)-prefixParts:]
 		}
@@ -133,7 +134,7 @@ func ipToNibble(cidr string, minimal bool) string {
 	split := strings.Split(util.ExpandIPv6(ip), "")
 	reverse := util.ReverseSlice(split)
 	if minimal {
-		prefixSize, _ := net.Mask.Size()
+		prefixSize, _ := ipNet.Mask.Size()
 		prefixParts := prefixSize / 4
 		reverse = reverse[len(reverse)-prefixParts:]
 	}
@@ -163,7 +164,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		FixFlattenAddress(&dnsIP)
 
 		ip, _, _ := net.ParseCIDR(address.Address)
-		isIP4 := (strings.Count(ip.String(), ":") < 2)
+		isIP4 := strings.Count(ip.String(), ":") < 2
 
 		if len(dnsIP.ForwardZoneName) > 0 {
 			var recordType rrType
@@ -216,6 +217,8 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 	}
 	zoneTemplate := template.Must(template.New("zone").Parse(string(templateString)))
 	util.CleanDirectory("./generated/zones")
+	cw := cache.New("./generated/hashes/zones.json")
+	ignoreRegex := regexp.MustCompile("(?m)^(\\s+\\d+\\s+; serial.*|; Generated at .*)$")
 
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
@@ -229,15 +232,16 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		}
 		templateArgs.SOAInfo = soaInfo
 
-		f, err := os.Create(fmt.Sprintf("./generated/zones/%s.db", zone))
+		_, err := cw.WriteTemplate(
+			fmt.Sprintf("./generated/zones/%s.db", zone),
+			zoneTemplate,
+			templateArgs,
+			[]*regexp.Regexp{ignoreRegex},
+			true,
+		)
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
-
-		w := tabwriter.NewWriter(f, 2, 2, 2, ' ', 0)
-		zoneTemplate.Execute(w, templateArgs)
-		w.Flush()
 	}
 
 	zones := make([]string, 0, len(zoneRecordsMap))

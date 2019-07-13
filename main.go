@@ -5,11 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/jmesserli/nx/ns/wg"
-
 	"github.com/jmesserli/nx/config"
 	"github.com/jmesserli/nx/netbox"
 	"github.com/jmesserli/nx/ns/dns"
+	"github.com/jmesserli/nx/ns/wg"
 )
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)

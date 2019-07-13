@@ -2,8 +2,9 @@ package dns
 
 import (
 	"fmt"
+	"github.com/jmesserli/nx/cache"
 	"io/ioutil"
-	"os"
+	"regexp"
 	"text/template"
 	"time"
 
@@ -39,6 +40,8 @@ func GenerateConfigs(zones []string, conf config.NXConfig) {
 	}
 	configTemplate := template.Must(template.New("config").Parse(string(templateString)))
 	util.CleanDirectory("./generated/bind-config")
+	cw := cache.New("./generated/hashes/bind-config.json")
+	ignoreRegex := regexp.MustCompile("(?m)^ \\* Generated at.*$")
 
 	templateVars := configTemplateVars{
 		GeneratedAt: time.Now().Format(time.RFC3339),
@@ -78,13 +81,16 @@ func GenerateConfigs(zones []string, conf config.NXConfig) {
 		}
 		templateVars.MasterIPs = masterIPsWithoutCurrent
 
-		f, err := os.Create(fmt.Sprintf("./generated/bind-config/%s.conf", currentMaster.Name))
+		_, err = cw.WriteTemplate(
+			fmt.Sprintf("./generated/bind-config/%s.conf", currentMaster.Name),
+			configTemplate,
+			templateVars,
+			[]*regexp.Regexp{ignoreRegex},
+			false,
+		)
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
-
-		configTemplate.Execute(f, templateVars)
 	}
 
 }
