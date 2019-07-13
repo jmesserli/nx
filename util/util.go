@@ -35,7 +35,7 @@ func ExpandIPv6(ip net.IP) string {
 	return string(dst)
 }
 
-func CleanDirectoryExcept(directory string, exceptions []string) {
+func CleanDirectoryExcept(directory string, exceptions []string, conf *config.NXConfig) {
 	fileInfos, err := ioutil.ReadDir(directory)
 	if err != nil {
 		panic(err)
@@ -48,6 +48,7 @@ func CleanDirectoryExcept(directory string, exceptions []string) {
 		}
 
 		logger.Printf("Removing file %s\n", name)
+		conf.UpdatedFiles = append(conf.UpdatedFiles, name)
 		_ = os.RemoveAll(name)
 	}
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jmesserli/nx/config"
@@ -48,10 +50,16 @@ func main() {
 
 		DottedMailResponsible: "unknown\\.admin.local",
 		NameserverFQDN:        "unknown-nameserver.local.",
-	}, conf)
+	}, &conf)
 
 	logger.Println("Generating BIND config files")
-	dns.GenerateConfigs(generatedZones, conf)
+	dns.GenerateConfigs(generatedZones, &conf)
 	logger.Println("Generating Wireguard config files")
-	wg.GenerateWgConfigs(wgIps)
+	wg.GenerateWgConfigs(wgIps, &conf)
+
+	logger.Println("Writing updated files report")
+	err := ioutil.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
+	if err != nil {
+		logger.Fatal(err)
+	}
 }

@@ -26,8 +26,9 @@ type NamespaceConfig struct {
 }
 
 type NXConfig struct {
-	Netbox     NetboxConfig    `json:"netbox"`
-	Namespaces NamespaceConfig `json:"namespaces"`
+	Netbox       NetboxConfig    `json:"netbox"`
+	Namespaces   NamespaceConfig `json:"namespaces"`
+	UpdatedFiles []string        `json:"-"`
 }
 
 func ReadConfig(path string) NXConfig {

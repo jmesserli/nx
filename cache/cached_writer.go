@@ -21,6 +21,7 @@ type CachedTemplateWriter struct {
 	fileHashes     map[string]string
 	buf            bytes.Buffer
 	ProcessedFiles []string
+	UpdatedFiles   []string
 }
 
 func New(hashFile string) *CachedTemplateWriter {
@@ -109,6 +110,7 @@ func (w *CachedTemplateWriter) WriteTemplate(
 
 	logger.Printf("New hash %s for file %s\n", hashStr, file)
 	w.ProcessedFiles = append(w.ProcessedFiles, file)
+	w.UpdatedFiles = append(w.UpdatedFiles, file)
 	w.fileHashes[file] = hashStr
 	w.updateJson()
 

@@ -76,7 +76,7 @@ func FixFlattenAddress(address *DNSIP) {
 		address.IP.Name = fmt.Sprintf("%s.%s", address.IP.Name, cutoff)
 	}
 
-	logger.Printf("(%s).%s -> (%s).%s\n", originalName, originalZone, address.IP.Name, shortZone)
+	logger.Printf("%s -> (%s).%s\n", originalName, address.IP.Name, shortZone)
 }
 
 type rrType string
@@ -142,7 +142,7 @@ func ipToNibble(cidr string, minimal bool) string {
 }
 
 // GenerateZones generates the BIND zonefiles
-func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf config.NXConfig) []string {
+func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf *config.NXConfig) []string {
 	t := time.Now()
 
 	if len(defaultSoaInfo.Serial) == 0 {
@@ -225,7 +225,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		templateArgs.ZoneName = zone
 
 		soaInfo := defaultSoaInfo
-		masterConf := util.FindMasterForZone(conf, zone)
+		masterConf := util.FindMasterForZone(*conf, zone)
 		if masterConf != nil {
 			soaInfo.DottedMailResponsible = masterConf.DottedEmail
 			soaInfo.NameserverFQDN = fmt.Sprintf("%s.", masterConf.Name)
@@ -244,7 +244,8 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf co
 		}
 	}
 
-	util.CleanDirectoryExcept("generated/zones", cw.ProcessedFiles)
+	util.CleanDirectoryExcept("generated/zones", cw.ProcessedFiles, conf)
+	conf.UpdatedFiles = append(conf.UpdatedFiles, cw.UpdatedFiles...)
 
 	zones := make([]string, 0, len(zoneRecordsMap))
 	for key := range zoneRecordsMap {

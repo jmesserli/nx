@@ -33,7 +33,7 @@ type configTemplateVars struct {
 	Zones       []templateZone
 }
 
-func GenerateConfigs(zones []string, conf config.NXConfig) {
+func GenerateConfigs(zones []string, conf *config.NXConfig) {
 	templateString, err := ioutil.ReadFile("templates/bind-config.tmpl")
 	if err != nil {
 		panic(err)
@@ -92,5 +92,6 @@ func GenerateConfigs(zones []string, conf config.NXConfig) {
 		}
 	}
 
-	util.CleanDirectoryExcept("generated/bind-config", cw.ProcessedFiles)
+	util.CleanDirectoryExcept("generated/bind-config", cw.ProcessedFiles, conf)
+	conf.UpdatedFiles = append(conf.UpdatedFiles, cw.UpdatedFiles...)
 }

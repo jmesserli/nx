@@ -3,6 +3,7 @@ package wg
 import (
 	"fmt"
 	"github.com/jmesserli/nx/cache"
+	"github.com/jmesserli/nx/config"
 	"github.com/jmesserli/nx/util"
 	"io/ioutil"
 	"regexp"
@@ -41,7 +42,7 @@ func putMap(theMap map[string][]parsedIp, key string, value parsedIp) {
 	}
 }
 
-func GenerateWgConfigs(ips []netbox.IPAddress) {
+func GenerateWgConfigs(ips []netbox.IPAddress, conf *config.NXConfig) {
 	var vpnPeers = make(map[string][]parsedIp, 0)
 
 	// find and parse valid peers
@@ -93,5 +94,6 @@ func GenerateWgConfigs(ips []netbox.IPAddress) {
 		}
 	}
 
-	util.CleanDirectoryExcept("generated/wg", cw.ProcessedFiles)
+	util.CleanDirectoryExcept("generated/wg", cw.ProcessedFiles, conf)
+	conf.UpdatedFiles = append(conf.UpdatedFiles, cw.UpdatedFiles...)
 }
