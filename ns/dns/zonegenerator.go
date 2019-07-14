@@ -115,8 +115,11 @@ func putMap(theMap map[string][]resourceRecord, key string, value resourceRecord
 	}
 }
 
-func ipToNibble(cidr string, minimal bool) string {
-	ip, ipNet, _ := net.ParseCIDR(cidr)
+func ipToNibble(cidr string, minimal bool) (string, error) {
+	ip, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return "", err
+	}
 	isIP4 := strings.Count(ip.String(), ":") < 2
 
 	if isIP4 {
@@ -128,7 +131,7 @@ func ipToNibble(cidr string, minimal bool) string {
 			reverse = reverse[len(reverse)-prefixParts:]
 		}
 		joined := strings.Join(reverse, ".")
-		return fmt.Sprintf("%s.in-addr.arpa", joined)
+		return fmt.Sprintf("%s.in-addr.arpa", joined), nil
 	}
 	// else IPv6
 	split := strings.Split(util.ExpandIPv6(ip), "")
@@ -138,7 +141,7 @@ func ipToNibble(cidr string, minimal bool) string {
 		prefixParts := prefixSize / 4
 		reverse = reverse[len(reverse)-prefixParts:]
 	}
-	return fmt.Sprintf("%s.ip6.arpa", strings.Join(reverse, "."))
+	return fmt.Sprintf("%s.ip6.arpa", strings.Join(reverse, ".")), nil
 }
 
 // GenerateZones generates the BIND zonefiles
@@ -190,14 +193,23 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf *c
 		}
 
 		if len(dnsIP.ReverseZoneName) > 0 {
-			zoneName := ipToNibble(dnsIP.ReverseZoneName, true)
+			zoneName, err := ipToNibble(dnsIP.ReverseZoneName, true)
+			if err != nil {
+				logger.Printf("Could not parse cidr <%v> of %v", dnsIP.ReverseZoneName, address)
+				continue
+			}
 
 			if len(dnsIP.ForwardZoneName) == 0 {
 				// Parse parent tags to restore forward zone name
 				tagparser.ParseTags(&dnsIP, address.Prefix.Tags, []string{})
 			}
 
-			name := ipToNibble(address.Address, false)
+			name, err := ipToNibble(address.Address, false)
+			if err != nil {
+				logger.Printf("Could not parse cidr <%v> of %v", address.Address, address)
+				continue
+			}
+
 			name = name[:len(name)-len(zoneName)-1]
 			putMap(zoneRecordsMap, zoneName, resourceRecord{
 				Name:  name,
