@@ -19,6 +19,7 @@ var logger = log.New(os.Stdout, "[cached_writer] ", log.LstdFlags)
 type CachedTemplateWriter struct {
 	hashFile       string
 	fileHashes     map[string]string
+	newHashes      map[string]string
 	buf            bytes.Buffer
 	ProcessedFiles []string
 	UpdatedFiles   []string
@@ -29,6 +30,7 @@ func New(hashFile string) *CachedTemplateWriter {
 		return &CachedTemplateWriter{
 			hashFile:   hashFile,
 			fileHashes: map[string]string{},
+			newHashes:  map[string]string{},
 		}
 	}
 
@@ -46,6 +48,7 @@ func New(hashFile string) *CachedTemplateWriter {
 	return &CachedTemplateWriter{
 		hashFile:   hashFile,
 		fileHashes: data,
+		newHashes:  map[string]string{},
 	}
 }
 
@@ -78,6 +81,8 @@ func (w *CachedTemplateWriter) WriteTemplate(
 	if ok && existingHash == hashStr {
 		logger.Printf("File fresh: %s\n", file)
 		w.ProcessedFiles = append(w.ProcessedFiles, file)
+		w.newHashes[file] = w.fileHashes[file]
+		w.updateJson()
 		return false, nil
 	}
 
@@ -112,13 +117,14 @@ func (w *CachedTemplateWriter) WriteTemplate(
 	w.ProcessedFiles = append(w.ProcessedFiles, file)
 	w.UpdatedFiles = append(w.UpdatedFiles, file)
 	w.fileHashes[file] = hashStr
+	w.newHashes[file] = hashStr
 	w.updateJson()
 
 	return true, nil
 }
 
 func (w *CachedTemplateWriter) updateJson() {
-	jsonBytes, err := json.Marshal(w.fileHashes)
+	jsonBytes, err := json.Marshal(w.newHashes)
 	if err != nil {
 		panic(err)
 	}
