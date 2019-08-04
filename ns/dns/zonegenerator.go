@@ -212,10 +212,14 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf *c
 			}
 
 			name = name[:len(name)-len(zoneName)-1]
+
+			rData := fmt.Sprintf("%s.%s", address.Name, dnsIP.ForwardZoneName)
+			rData = strings.TrimRight(rData, ".")
+			rData = rData + "."
 			putMap(zoneRecordsMap, zoneName, resourceRecord{
 				Name:  name,
 				Type:  Ptr,
-				RData: fmt.Sprintf("%s.%s.", address.Name, dnsIP.ForwardZoneName),
+				RData: rData,
 			})
 		}
 	}
