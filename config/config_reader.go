@@ -10,11 +10,17 @@ type NetboxConfig struct {
 	ApiKey string `json:"api_key"`
 }
 
+type ZoneInclude struct {
+	Zone         string   `json:"zone"`
+	IncludeFiles []string `json:"include_files"`
+}
+
 type MasterConfig struct {
-	Name        string   `json:"name"`
-	IP          string   `json:"ip"`
-	DottedEmail string   `json:"dotted_mail"`
-	Zones       []string `json:"zones"`
+	Name        string        `json:"name"`
+	IP          string        `json:"ip"`
+	DottedEmail string        `json:"dotted_mail"`
+	Zones       []string      `json:"zones"`
+	Includes    []ZoneInclude `json:"includes"`
 }
 
 type DNSNamespaceConfig struct {

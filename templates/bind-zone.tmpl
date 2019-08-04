@@ -17,6 +17,12 @@ $TTL	{{ .BindDefaultRRTTL }}
 @ NS {{ .NameserverFQDN }}
 {{- end }}
 
+; Includes
+{{ range $inc := .Includes -}}
+    $INCLUDE {{ $inc }}
+{{ else -}}
+; No includes for zone {{ .ZoneName }}
+{{ end }}
 ; Name	Type	RData
 {{ range $rr := .Records -}}
     {{ $rr.Name }}	{{ $rr.Type }}	{{ $rr.RData }}

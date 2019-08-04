@@ -103,6 +103,7 @@ type templateArguments struct {
 	Records     []resourceRecord
 	ZoneName    string
 	GeneratedAt string
+	Includes    []string
 }
 
 func putMap(theMap map[string][]resourceRecord, key string, value resourceRecord) {
@@ -241,6 +242,14 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf *c
 		if masterConf != nil {
 			soaInfo.DottedMailResponsible = masterConf.DottedEmail
 			soaInfo.NameserverFQDN = fmt.Sprintf("%s.", masterConf.Name)
+
+			var includes []string
+			for _, include := range masterConf.Includes {
+				if include.Zone == zone {
+					includes = append(includes, include.IncludeFiles...)
+				}
+			}
+			templateArgs.Includes = includes
 		}
 		templateArgs.SOAInfo = soaInfo
 
