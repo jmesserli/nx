@@ -2,7 +2,6 @@ package dns
 
 import (
 	"fmt"
-	"github.com/jmesserli/nx/cache"
 	"io/ioutil"
 	"log"
 	"net"
@@ -12,10 +11,11 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/jmesserli/nx/config"
-	"github.com/jmesserli/nx/netbox"
-	"github.com/jmesserli/nx/tagparser"
-	"github.com/jmesserli/nx/util"
+	"peg.nu/nx/cache"
+	"peg.nu/nx/config"
+	"peg.nu/nx/netbox"
+	"peg.nu/nx/tagparser"
+	"peg.nu/nx/util"
 )
 
 var logger = log.New(os.Stdout, "[generator] ", log.LstdFlags)

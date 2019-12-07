@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/jmesserli/nx/config"
-	"github.com/jmesserli/nx/tagparser"
+	"peg.nu/nx/config"
+	"peg.nu/nx/tagparser"
 )
 
 type Client struct {

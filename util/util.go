@@ -7,18 +7,10 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
-
-	"github.com/jmesserli/nx/config"
+	"peg.nu/nx/config"
 )
 
 var logger = log.New(os.Stdout, "[util] ", log.LstdFlags)
-
-func MustConvertToBool(input string) bool {
-	value, _ := strconv.ParseBool(input)
-
-	return value
-}
 
 func ReverseSlice(a []string) []string {
 	for i := len(a)/2 - 1; i >= 0; i-- {

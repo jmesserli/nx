@@ -3,7 +3,7 @@ package dns
 import (
 	"testing"
 
-	"github.com/jmesserli/nx/netbox"
+	"peg.nu/nx/netbox"
 )
 
 func TestDomainNormalizing(t *testing.T) {

@@ -2,14 +2,14 @@ package dns
 
 import (
 	"fmt"
-	"github.com/jmesserli/nx/cache"
 	"io/ioutil"
 	"regexp"
 	"text/template"
 	"time"
 
-	"github.com/jmesserli/nx/config"
-	"github.com/jmesserli/nx/util"
+	"peg.nu/nx/cache"
+	"peg.nu/nx/config"
+	"peg.nu/nx/util"
 )
 
 type zoneType string

@@ -2,15 +2,15 @@ package wg
 
 import (
 	"fmt"
-	"github.com/jmesserli/nx/cache"
-	"github.com/jmesserli/nx/config"
-	"github.com/jmesserli/nx/util"
 	"io/ioutil"
 	"regexp"
 	"text/template"
 
-	"github.com/jmesserli/nx/netbox"
-	"github.com/jmesserli/nx/tagparser"
+	"peg.nu/nx/cache"
+	"peg.nu/nx/config"
+	"peg.nu/nx/netbox"
+	"peg.nu/nx/tagparser"
+	"peg.nu/nx/util"
 )
 
 type templatePeer struct {

@@ -1,4 +1,4 @@
-FROM golang:1.12 as builder
+FROM golang:1.13 as builder
 LABEL maintainer="Joel Messerli <hi.github@peg.nu>"
 WORKDIR /go/src/github.com/jmesserli/nx
 COPY . .

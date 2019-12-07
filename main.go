@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmesserli/nx/config"
-	"github.com/jmesserli/nx/netbox"
-	"github.com/jmesserli/nx/ns/dns"
-	"github.com/jmesserli/nx/ns/wg"
+	"peg.nu/nx/config"
+	"peg.nu/nx/netbox"
+	"peg.nu/nx/ns/dns"
+	"peg.nu/nx/ns/wg"
 )
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
