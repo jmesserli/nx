@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"peg.nu/nx/ns/ipl"
 	"strings"
 	"time"
 
@@ -22,21 +24,25 @@ func main() {
 	logger.Println("Loading prefixes")
 	prefixes := nc.GetIPAMPrefixes()
 
-	dnsIps := []netbox.IPAddress{}
-	wgIps := []netbox.IPAddress{}
+	var dnsIps, wgIps, iplIps []netbox.IPAddress
 
 	logger.Println("Loading ip addresses of enabled prefixes")
 	for _, prefix := range prefixes {
-		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0) {
+		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0 || prefix.EnOptions.IPLEnabled) {
+			logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
 			continue
 		}
 
+		logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
 		addresses := nc.GetIPAddressesByPrefix(prefix)
 		if prefix.EnOptions.DNSEnabled {
 			dnsIps = append(dnsIps, addresses...)
 		}
 		if len(prefix.EnOptions.WGVpnName) > 0 {
 			wgIps = append(wgIps, addresses...)
+		}
+		if prefix.EnOptions.IPLEnabled {
+			iplIps = append(iplIps, addresses...)
 		}
 	}
 
@@ -56,6 +62,8 @@ func main() {
 	dns.GenerateConfigs(generatedZones, &conf)
 	logger.Println("Generating Wireguard config files")
 	wg.GenerateWgConfigs(wgIps, &conf)
+	logger.Println("Generating IP lists")
+	ipl.GenerateIPLists(iplIps, &conf)
 
 	logger.Println("Writing updated files report")
 	err := ioutil.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)

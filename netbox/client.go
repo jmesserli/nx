@@ -50,6 +50,7 @@ type ipamPrefixResponse struct {
 type EnableOptions struct {
 	DNSEnabled bool   `nx:"enable,ns:dns"`
 	WGVpnName  string `nx:"mesh,ns:wg"`
+	IPLEnabled bool   `nx:"enable,ns:ipl"`
 }
 
 type IPAMPrefix struct {

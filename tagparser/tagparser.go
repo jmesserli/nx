@@ -101,6 +101,9 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 		sKind := fType.Elem().Kind()
 
 		if sKind == reflect.String {
+			if len(strValues) == 0 {
+				return nil, fmt.Errorf("No value available.")
+			}
 			return strValues, nil
 		} else if sKind == reflect.Int {
 			intValues := make([]int, 0, len(strValues))
