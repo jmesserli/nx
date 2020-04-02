@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -34,6 +35,9 @@ func (c Client) performGET(path string, query string) []byte {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		log.Fatal(fmt.Errorf("netbox returned a non 200 status code: %s", res.Status))
 	}
 
 	defer res.Body.Close()
