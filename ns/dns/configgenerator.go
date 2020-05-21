@@ -28,6 +28,7 @@ type templateZone struct {
 
 type configTemplateVars struct {
 	ServerName  string
+	ServerIP    string
 	GeneratedAt string
 	MasterIPs   []string
 	Zones       []templateZone
@@ -47,6 +48,7 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 	}
 	for _, currentMaster := range conf.Namespaces.DNS.Masters {
 		templateVars.ServerName = currentMaster.Name
+		templateVars.ServerIP = currentMaster.IP
 		templateZones := []templateZone{}
 
 		for _, zonesMaster := range conf.Namespaces.DNS.Masters {

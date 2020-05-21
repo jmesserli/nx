@@ -27,6 +27,7 @@ zone "{{ $zone.Name }}" {
 	/{{ $zone.Name }}.db";
 	{{- if $zone.IsSlave }}
     masters { {{ $zone.MasterIP }}; };
+    transfer-source {{ $.ServerIP }};
 	{{- else }}
     allow-transfer { "nbbx-slaves-transfer"; };
     also-notify { "nbbx-slaves-notify"; };
