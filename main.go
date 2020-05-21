@@ -27,22 +27,33 @@ func main() {
 	var dnsIps, wgIps, iplIps []netbox.IPAddress
 
 	logger.Println("Loading ip addresses of enabled prefixes")
+
+	var enabledPrefixCount = 0
+	var prefixIPsList []prefixIPs
+	var prefixIPchan = make(chan prefixIPs)
 	for _, prefix := range prefixes {
 		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0 || prefix.EnOptions.IPLEnabled) {
 			logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
 			continue
 		}
 
-		logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
-		addresses := nc.GetIPAddressesByPrefix(prefix)
-		if prefix.EnOptions.DNSEnabled {
-			dnsIps = append(dnsIps, addresses...)
+		enabledPrefixCount++
+		go getIPsForPrefix(nc, prefix, prefixIPchan)
+	}
+
+	for i := 0; i < enabledPrefixCount; i++ {
+		prefixIPsList = append(prefixIPsList, <-prefixIPchan)
+	}
+
+	for _, prefixIP := range prefixIPsList {
+		if prefixIP.prefix.EnOptions.DNSEnabled {
+			dnsIps = append(dnsIps, prefixIP.ips...)
 		}
-		if len(prefix.EnOptions.WGVpnName) > 0 {
-			wgIps = append(wgIps, addresses...)
+		if len(prefixIP.prefix.EnOptions.WGVpnName) > 0 {
+			wgIps = append(wgIps, prefixIP.ips...)
 		}
-		if prefix.EnOptions.IPLEnabled {
-			iplIps = append(iplIps, addresses...)
+		if prefixIP.prefix.EnOptions.IPLEnabled {
+			iplIps = append(iplIps, prefixIP.ips...)
 		}
 	}
 
@@ -69,5 +80,20 @@ func main() {
 	err := ioutil.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
 	if err != nil {
 		logger.Fatal(err)
+	}
+}
+
+type prefixIPs struct {
+	prefix netbox.IPAMPrefix
+	ips    []netbox.IPAddress
+}
+
+func getIPsForPrefix(nc netbox.Client, prefix netbox.IPAMPrefix, ch chan prefixIPs) {
+	logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
+	addresses := nc.GetIPAddressesByPrefix(prefix)
+
+	ch <- prefixIPs{
+		prefix: prefix,
+		ips:    addresses,
 	}
 }
