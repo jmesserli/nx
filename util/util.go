@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"peg.nu/nx/config"
+	"peg.nu/nx/netbox"
+	"time"
 )
 
 var logger = log.New(os.Stdout, "[util] ", log.LstdFlags)
@@ -63,4 +65,43 @@ func FindMasterForZone(conf config.NXConfig, zone string) *config.MasterConfig {
 	}
 
 	return nil
+}
+
+func IpAddressesLessFn(addresses []netbox.IPAddress) func(i, j int) bool {
+	return func(i, j int) bool {
+		return CompareCIDRStrings(addresses[i].Address, addresses[j].Address)
+	}
+}
+
+func CompareCIDRStrings(first, second string) bool {
+	firstBytes := cidrStringToByteSlice(first)
+	secondBytes := cidrStringToByteSlice(second)
+
+	for i := 0; i < len(firstBytes); i++ {
+		if firstBytes[i] < secondBytes[i] {
+			return true
+		}
+		if firstBytes[i] > secondBytes[i] {
+			return false
+		}
+	}
+
+	return false
+}
+
+func cidrStringToByteSlice(cidrString string) []byte {
+	ip, _, err := net.ParseCIDR(cidrString)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return ip
+}
+
+func DurationSince(msg string, start time.Time) {
+	log.Printf("%v took %v.\n", msg, time.Since(start))
+}
+
+func StartTracking(msg string) (string, time.Time) {
+	return msg, time.Now()
 }

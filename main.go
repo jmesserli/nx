@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"peg.nu/nx/ns/ipl"
+	"peg.nu/nx/util"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,6 +28,20 @@ func main() {
 
 	var dnsIps, wgIps, iplIps []netbox.IPAddress
 
+	prefixIPsList := loadPrefixes(prefixes, nc)
+	sortPrefixList(prefixIPsList)
+	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, conf)
+
+	logger.Println("Writing updated files report")
+	err := ioutil.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
+	if err != nil {
+		logger.Fatal(err)
+	}
+}
+
+func loadPrefixes(prefixes []netbox.IPAMPrefix, nc netbox.Client) []prefixIPs {
+	defer util.DurationSince(util.StartTracking("loadPrefixes"))
+
 	logger.Println("Loading ip addresses of enabled prefixes")
 
 	var enabledPrefixCount = 0
@@ -44,6 +60,23 @@ func main() {
 	for i := 0; i < enabledPrefixCount; i++ {
 		prefixIPsList = append(prefixIPsList, <-prefixIPchan)
 	}
+	return prefixIPsList
+}
+
+func sortPrefixList(prefixIPsList []prefixIPs) {
+	defer util.DurationSince(util.StartTracking("sortPrefixList"))
+
+	sort.Slice(prefixIPsList, func(i, j int) bool {
+		return util.CompareCIDRStrings(prefixIPsList[i].prefix.Prefix, prefixIPsList[j].prefix.Prefix)
+	})
+
+	for _, pip := range prefixIPsList {
+		sort.Slice(pip.ips, util.IpAddressesLessFn(pip.ips))
+	}
+}
+
+func generateAll(prefixIPsList []prefixIPs, dnsIps []netbox.IPAddress, wgIps []netbox.IPAddress, iplIps []netbox.IPAddress, conf config.NXConfig) {
+	defer util.DurationSince(util.StartTracking("generateAll"))
 
 	for _, prefixIP := range prefixIPsList {
 		if prefixIP.prefix.EnOptions.DNSEnabled {
@@ -75,12 +108,6 @@ func main() {
 	wg.GenerateWgConfigs(wgIps, &conf)
 	logger.Println("Generating IP lists")
 	ipl.GenerateIPLists(iplIps, &conf)
-
-	logger.Println("Writing updated files report")
-	err := ioutil.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
-	if err != nil {
-		logger.Fatal(err)
-	}
 }
 
 type prefixIPs struct {
