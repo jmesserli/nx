@@ -99,7 +99,7 @@ func cidrStringToByteSlice(cidrString string) []byte {
 }
 
 func DurationSince(msg string, start time.Time) {
-	log.Printf("%v took %v.\n", msg, time.Since(start))
+	logger.Printf("%v took %v.\n", msg, time.Since(start))
 }
 
 func StartTracking(msg string) (string, time.Time) {
