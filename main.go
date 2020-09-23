@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -49,7 +48,7 @@ func loadPrefixes(prefixes []netbox.IPAMPrefix, nc netbox.Client) []prefixIPs {
 	var prefixIPchan = make(chan prefixIPs)
 	for _, prefix := range prefixes {
 		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0 || prefix.EnOptions.IPLEnabled) {
-			logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
+			//logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
 			continue
 		}
 
@@ -116,7 +115,7 @@ type prefixIPs struct {
 }
 
 func getIPsForPrefix(nc netbox.Client, prefix netbox.IPAMPrefix, ch chan prefixIPs) {
-	logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
+	//logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
 	addresses := nc.GetIPAddressesByPrefix(prefix)
 
 	ch <- prefixIPs{

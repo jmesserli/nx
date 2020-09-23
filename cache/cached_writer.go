@@ -79,7 +79,7 @@ func (w *CachedTemplateWriter) WriteTemplate(
 
 	existingHash, ok := w.fileHashes[file]
 	if ok && existingHash == hashStr {
-		logger.Printf("File fresh: %s\n", file)
+		//logger.Printf("File fresh: %s\n", file)
 		w.ProcessedFiles = append(w.ProcessedFiles, file)
 		w.newHashes[file] = w.fileHashes[file]
 		w.updateJson()

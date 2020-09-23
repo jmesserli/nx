@@ -76,7 +76,7 @@ func FixFlattenAddress(address *DNSIP) {
 		address.IP.Name = fmt.Sprintf("%s.%s", address.IP.Name, cutoff)
 	}
 
-	logger.Printf("%s -> (%s).%s\n", originalName, address.IP.Name, shortZone)
+	//logger.Printf("%s -> (%s).%s\n", originalName, address.IP.Name, shortZone)
 }
 
 type rrType string
