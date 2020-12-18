@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"peg.nu/nx/model"
 	"regexp"
 	"strings"
 	"text/template"
@@ -13,7 +14,6 @@ import (
 
 	"peg.nu/nx/cache"
 	"peg.nu/nx/config"
-	"peg.nu/nx/netbox"
 	"peg.nu/nx/tagparser"
 	"peg.nu/nx/util"
 )
@@ -33,7 +33,7 @@ type SOAInfo struct {
 }
 
 type DNSIP struct {
-	IP *netbox.IPAddress
+	IP *model.IPAddress
 
 	Enabled         bool     `nx:"enable,ns:dns"`
 	ReverseZoneName string   `nx:"reverse_zone,ns:dns"`
@@ -146,7 +146,7 @@ func ipToNibble(cidr string, minimal bool) (string, error) {
 }
 
 // GenerateZones generates the BIND zonefiles
-func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf *config.NXConfig) []string {
+func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *config.NXConfig) []string {
 	t := time.Now()
 
 	if len(defaultSoaInfo.Serial) == 0 {
@@ -202,7 +202,7 @@ func GenerateZones(addresses []netbox.IPAddress, defaultSoaInfo SOAInfo, conf *c
 
 			if len(dnsIP.ForwardZoneName) == 0 {
 				// Parse parent tags to restore forward zone name
-				tagparser.ParseTags(&dnsIP, address.Prefix.Tags, []string{})
+				tagparser.ParseTags(&dnsIP, address.Prefix.Tags, []model.Tag{})
 			}
 
 			name, err := ipToNibble(address.Address, false)

@@ -2,6 +2,7 @@ package tagparser
 
 import (
 	"fmt"
+	"peg.nu/nx/model"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -28,7 +29,7 @@ func (f annotatedField) getRegex() *regexp.Regexp {
 	return f.regex
 }
 
-func ParseTags(data interface{}, tags, parentTags []string) {
+func ParseTags(data interface{}, tags, parentTags []model.Tag) {
 	t := reflect.TypeOf(data)
 
 	if t.Kind() != reflect.Ptr {
@@ -80,12 +81,12 @@ func ParseTags(data interface{}, tags, parentTags []string) {
 	}
 }
 
-func findValueForField(field annotatedField, tags []string) (interface{}, error) {
+func findValueForField(field annotatedField, tags []model.Tag) (interface{}, error) {
 	rex := field.getRegex()
 
 	strValues := make([]string, 0)
 	for _, tag := range tags {
-		match := rex.FindStringSubmatch(tag)
+		match := rex.FindStringSubmatch(tag.Name)
 		if match == nil {
 			continue
 		}
@@ -102,7 +103,7 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 
 		if sKind == reflect.String {
 			if len(strValues) == 0 {
-				return nil, fmt.Errorf("No value available.")
+				return nil, fmt.Errorf("no value available")
 			}
 			return strValues, nil
 		} else if sKind == reflect.Int {
@@ -122,14 +123,14 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 	} else if fKind == reflect.String {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for string field <%s>. Returning empty string.\n", field.sField.Name)
-			return "", fmt.Errorf("No value available.")
+			return "", fmt.Errorf("no value available")
 		}
 
 		return strValues[0], nil
 	} else if fKind == reflect.Int {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-			return 0, fmt.Errorf("No value available.")
+			return 0, fmt.Errorf("no value available")
 		}
 
 		for _, val := range strValues {
@@ -143,11 +144,11 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 		}
 
 		//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-		return 0, fmt.Errorf("No value available.")
+		return 0, fmt.Errorf("no value available")
 	} else if fKind == reflect.Bool {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
-			return false, fmt.Errorf("No value available.")
+			return false, fmt.Errorf("no value available")
 		}
 
 		for _, val := range strValues {
@@ -161,7 +162,7 @@ func findValueForField(field annotatedField, tags []string) (interface{}, error)
 		}
 
 		//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
-		return false, fmt.Errorf("No value available.")
+		return false, fmt.Errorf("no value available")
 	}
 
 	panic(fmt.Sprintf("Unsupported field type <%v>", fKind))

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"peg.nu/nx/cache"
 	"peg.nu/nx/config"
-	"peg.nu/nx/netbox"
+	"peg.nu/nx/model"
 	"peg.nu/nx/tagparser"
 	"peg.nu/nx/util"
 	"regexp"
@@ -25,7 +25,7 @@ type templateVars struct {
 	GeneratedAt string
 }
 
-func GenerateIPLists(addresses []netbox.IPAddress, conf *config.NXConfig) {
+func GenerateIPLists(addresses []model.IPAddress, conf *config.NXConfig) {
 	groupMap := make(map[string][]string)
 
 	for _, address := range addresses {

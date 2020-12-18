@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 	"peg.nu/nx/config"
-	"peg.nu/nx/netbox"
+	"peg.nu/nx/model"
 	"time"
 )
 
@@ -67,7 +67,7 @@ func FindMasterForZone(conf config.NXConfig, zone string) *config.MasterConfig {
 	return nil
 }
 
-func IpAddressesLessFn(addresses []netbox.IPAddress) func(i, j int) bool {
+func IpAddressesLessFn(addresses []model.IPAddress) func(i, j int) bool {
 	return func(i, j int) bool {
 		return CompareCIDRStrings(addresses[i].Address, addresses[j].Address)
 	}

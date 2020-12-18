@@ -3,12 +3,12 @@ package wg
 import (
 	"fmt"
 	"io/ioutil"
+	"peg.nu/nx/model"
 	"regexp"
 	"text/template"
 
 	"peg.nu/nx/cache"
 	"peg.nu/nx/config"
-	"peg.nu/nx/netbox"
 	"peg.nu/nx/tagparser"
 	"peg.nu/nx/util"
 )
@@ -28,7 +28,7 @@ type templateData struct {
 }
 
 type parsedIp struct {
-	IP   netbox.IPAddress
+	IP   model.IPAddress
 	peer templatePeer
 }
 
@@ -42,7 +42,7 @@ func putMap(theMap map[string][]parsedIp, key string, value parsedIp) {
 	}
 }
 
-func GenerateWgConfigs(ips []netbox.IPAddress, conf *config.NXConfig) {
+func GenerateWgConfigs(ips []model.IPAddress, conf *config.NXConfig) {
 	var vpnPeers = make(map[string][]parsedIp, 0)
 
 	// find and parse valid peers

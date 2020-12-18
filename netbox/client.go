@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"peg.nu/nx/model"
 
 	"peg.nu/nx/config"
 	"peg.nu/nx/tagparser"
@@ -47,52 +48,30 @@ func (c Client) performGET(path string, query string) []byte {
 }
 
 type ipamPrefixResponse struct {
-	Count   int          `json:"count"`
-	Results []IPAMPrefix `json:"results"`
+	Count   int                `json:"count"`
+	Results []model.IPAMPrefix `json:"results"`
 }
 
-type EnableOptions struct {
-	DNSEnabled bool   `nx:"enable,ns:dns"`
-	WGVpnName  string `nx:"mesh,ns:wg"`
-	IPLEnabled bool   `nx:"enable,ns:ipl"`
-}
-
-type IPAMPrefix struct {
-	ID     int      `json:"id"`
-	Prefix string   `json:"prefix"`
-	Tags   []string `json:"tags"`
-
-	EnOptions EnableOptions
-}
-
-func (c Client) GetIPAMPrefixes() []IPAMPrefix {
+func (c Client) GetIPAMPrefixes() []model.IPAMPrefix {
 	response := ipamPrefixResponse{}
 	json.Unmarshal(c.performGET("/ipam/prefixes/", ""), &response)
 
 	for i := range response.Results {
 		prefix := &response.Results[i]
-		prefix.EnOptions = EnableOptions{}
+		prefix.EnOptions = model.EnableOptions{}
 
-		tagparser.ParseTags(&prefix.EnOptions, prefix.Tags, []string{})
+		tagparser.ParseTags(&prefix.EnOptions, prefix.Tags, []model.Tag{})
 	}
 
 	return response.Results
 }
 
-type IPAddress struct {
-	ID      int      `json:"id"`
-	Address string   `json:"address"`
-	Name    string   `json:"description"`
-	Tags    []string `json:"tags"`
-	Prefix  *IPAMPrefix
-}
-
 type ipAddressResponse struct {
-	Count   int         `json:"count"`
-	Results []IPAddress `json:"results"`
+	Count   int               `json:"count"`
+	Results []model.IPAddress `json:"results"`
 }
 
-func (c Client) GetIPAddressesByPrefix(prefix IPAMPrefix) []IPAddress {
+func (c Client) GetIPAddressesByPrefix(prefix model.IPAMPrefix) []model.IPAddress {
 	response := ipAddressResponse{}
 	json.Unmarshal(c.performGET("/ipam/ip-addresses/", fmt.Sprintf("?parent=%s", url.QueryEscape(prefix.Prefix))), &response)
 

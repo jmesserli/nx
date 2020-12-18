@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"peg.nu/nx/model"
 	"peg.nu/nx/ns/ipl"
 	"peg.nu/nx/util"
 	"sort"
@@ -25,7 +26,7 @@ func main() {
 	logger.Println("Loading prefixes")
 	prefixes := nc.GetIPAMPrefixes()
 
-	var dnsIps, wgIps, iplIps []netbox.IPAddress
+	var dnsIps, wgIps, iplIps []model.IPAddress
 
 	prefixIPsList := loadPrefixes(prefixes, nc)
 	sortPrefixList(prefixIPsList)
@@ -38,7 +39,7 @@ func main() {
 	}
 }
 
-func loadPrefixes(prefixes []netbox.IPAMPrefix, nc netbox.Client) []prefixIPs {
+func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
 	defer util.DurationSince(util.StartTracking("loadPrefixes"))
 
 	logger.Println("Loading ip addresses of enabled prefixes")
@@ -74,7 +75,7 @@ func sortPrefixList(prefixIPsList []prefixIPs) {
 	}
 }
 
-func generateAll(prefixIPsList []prefixIPs, dnsIps []netbox.IPAddress, wgIps []netbox.IPAddress, iplIps []netbox.IPAddress, conf config.NXConfig) {
+func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []model.IPAddress, iplIps []model.IPAddress, conf config.NXConfig) {
 	defer util.DurationSince(util.StartTracking("generateAll"))
 
 	for _, prefixIP := range prefixIPsList {
@@ -110,11 +111,11 @@ func generateAll(prefixIPsList []prefixIPs, dnsIps []netbox.IPAddress, wgIps []n
 }
 
 type prefixIPs struct {
-	prefix netbox.IPAMPrefix
-	ips    []netbox.IPAddress
+	prefix model.IPAMPrefix
+	ips    []model.IPAddress
 }
 
-func getIPsForPrefix(nc netbox.Client, prefix netbox.IPAMPrefix, ch chan prefixIPs) {
+func getIPsForPrefix(nc netbox.Client, prefix model.IPAMPrefix, ch chan prefixIPs) {
 	//logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
 	addresses := nc.GetIPAddressesByPrefix(prefix)
 
