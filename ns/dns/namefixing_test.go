@@ -1,9 +1,8 @@
 package dns
 
 import (
+	"peg.nu/nx/model"
 	"testing"
-
-	"peg.nu/nx/netbox"
 )
 
 func TestDomainNormalizing(t *testing.T) {
@@ -42,24 +41,25 @@ func TestDomainNormalizing(t *testing.T) {
 	})
 }
 
-func makeAddress(name, zone string) netbox.IPAddress {
-	return netbox.IPAddress{
-		Name: name,
-		GenOptions: netbox.GenerateOptions{
-			ForwardZoneName: zone,
+func makeAddress(name, zone string) DNSIP {
+	return DNSIP{
+		IP: &model.IPAddress{
+			Name: name,
 		},
+
+		ForwardZoneName: zone,
 	}
 }
 
-func testNameFixing(original, expect netbox.IPAddress, t *testing.T) {
+func testNameFixing(original, expect DNSIP, t *testing.T) {
 	updated := original
 	FixFlattenAddress(&updated)
 
-	if updated.Name != expect.Name {
-		t.Errorf("Expected Name to be <%s>; but was <%s>", expect.Name, updated.Name)
+	if updated.IP.Name != expect.IP.Name {
+		t.Errorf("Expected Name to be <%s>; but was <%s>", expect.IP.Name, updated.IP.Name)
 	}
 
-	if updated.GenOptions.ForwardZoneName != expect.GenOptions.ForwardZoneName {
-		t.Errorf("Expected Zone to be <%s>; but was <%s>", expect.GenOptions.ForwardZoneName, updated.GenOptions.ForwardZoneName)
+	if updated.ForwardZoneName != expect.ForwardZoneName {
+		t.Errorf("Expected Zone to be <%s>; but was <%s>", expect.ForwardZoneName, updated.ForwardZoneName)
 	}
 }
