@@ -1,6 +1,7 @@
 package tagparser
 
 import (
+	"peg.nu/nx/model"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -14,6 +15,7 @@ type TestingStruct struct {
 	IntSlice      []int    `nx:"intsl,ns:test"`
 	Empty         string
 	NotOverridden string `nx:"nov,ns:test"`
+	Boolean       bool   `nx:"bol,ns:test"`
 }
 
 func TestTagParsing(t *testing.T) {
@@ -24,15 +26,19 @@ func TestTagParsing(t *testing.T) {
 		OtherNs:       "someOtherString",
 		IntSlice:      []int{1, 2, 3},
 		NotOverridden: "",
+		Boolean:       false,
 	}
 	actual := TestingStruct{}
-	pTags := []string{"nx:test:string[overriddenValue]", "nx:test:int[invalidInt]", "nx:test:int[42]", "nx:test:nov[false]"}
-	tags := []string{
-		"nx:test:string[someString]", "nx:text:string[shouldBeIgnored]",
-		"nx:test:strsl[strings]", "nx:test:strsl[may]", "nx:test:strsl[slice]",
-		"nx:test2:sons[someOtherString]",
-		"nx:test:intsl[1]", "nx:test:intsl[2]", "nx:test:intsl[3]", "nx:test:intsl[invalidIntSlice]",
-		"nx:test:nov[]",
+	pTags := []model.Tag{
+		{Name: "nx:test:string[overriddenValue]"}, {Name: "nx:test:int[invalidInt]"}, {Name: "nx:test:int[42]"}, {Name: "nx:test:nov[false]"},
+	}
+	tags := []model.Tag{
+		{Name: "nx:test:string[someString]"}, {Name: "nx:text:string[shouldBeIgnored]"},
+		{Name: "nx:test:strsl[strings]"}, {Name: "nx:test:strsl[may]"}, {Name: "nx:test:strsl[slice]"},
+		{Name: "nx:test2:sons[someOtherString]"},
+		{Name: "nx:test:intsl[1]"}, {Name: "nx:test:intsl[2]"}, {Name: "nx:test:intsl[3]"}, {Name: "nx:test:intsl[invalidIntSlice]"},
+		{Name: "nx:test:nov[]"},
+		{Name: "nx:test:bol[false]"},
 	}
 
 	ParseTags(&actual, tags, pTags)
