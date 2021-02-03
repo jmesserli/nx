@@ -15,6 +15,7 @@ type TestingStruct struct {
 	IntSlice      []int    `nx:"intsl,ns:test"`
 	Empty         string
 	NotOverridden string `nx:"nov,ns:test"`
+	Boolean       bool   `nx:"bol,ns:test"`
 }
 
 func TestTagParsing(t *testing.T) {
@@ -25,6 +26,7 @@ func TestTagParsing(t *testing.T) {
 		OtherNs:       "someOtherString",
 		IntSlice:      []int{1, 2, 3},
 		NotOverridden: "",
+		Boolean:       false,
 	}
 	actual := TestingStruct{}
 	pTags := []model.Tag{
@@ -36,6 +38,7 @@ func TestTagParsing(t *testing.T) {
 		{Name: "nx:test2:sons[someOtherString]"},
 		{Name: "nx:test:intsl[1]"}, {Name: "nx:test:intsl[2]"}, {Name: "nx:test:intsl[3]"}, {Name: "nx:test:intsl[invalidIntSlice]"},
 		{Name: "nx:test:nov[]"},
+		{Name: "nx:test:bol[false]"},
 	}
 
 	ParseTags(&actual, tags, pTags)
