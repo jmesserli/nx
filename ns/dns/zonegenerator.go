@@ -178,8 +178,15 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 				recordType = Aaaa
 			}
 
+			var name string
+			if address.Name != "" {
+				name = address.Name
+			} else {
+				name = address.Description
+			}
 			putMap(zoneRecordsMap, dnsIP.ForwardZoneName, resourceRecord{
-				Name:  address.Name,
+
+				Name:  name,
 				Type:  recordType,
 				RData: ip.String(),
 			})
