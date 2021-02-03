@@ -54,7 +54,7 @@ func GenerateWgConfigs(ips []model.IPAddress, conf *config.NXConfig) {
 			continue
 		}
 
-		peer.Name = ip.Name
+		peer.Name = ip.GetName()
 		putMap(vpnPeers, ip.Prefix.EnOptions.WGVpnName, parsedIp{IP: ip, peer: peer})
 	}
 
@@ -77,7 +77,7 @@ func GenerateWgConfigs(ips []model.IPAddress, conf *config.NXConfig) {
 			data := templateData{
 				OwnAddress: peer.IP.Address,
 				OwnPort:    peer.peer.Port,
-				ServerName: peer.IP.Name,
+				ServerName: peer.IP.GetName(),
 				Peers:      peersWithoutCurrent,
 			}
 

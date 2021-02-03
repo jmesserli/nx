@@ -44,11 +44,11 @@ type DNSIP struct {
 var unknownNameCounter = 1
 
 func FixFlattenAddress(address *DNSIP) {
-	originalName := address.IP.Name
-	// remove everyting after the first space
-	address.IP.Name = strings.Split(strings.ToLower(originalName), " ")[0]
-	if len(address.IP.Name) == 0 {
-		address.IP.Name = fmt.Sprintf("unknown-static-%v", unknownNameCounter)
+	originalName := address.IP.GetName()
+	// remove everything after the first space
+	address.IP.DnsName = strings.Split(strings.ToLower(originalName), " ")[0]
+	if len(address.IP.GetName()) == 0 {
+		address.IP.DnsName = fmt.Sprintf("unknown-static-%v", unknownNameCounter)
 		unknownNameCounter++
 	}
 
@@ -66,14 +66,14 @@ func FixFlattenAddress(address *DNSIP) {
 	}
 	address.ForwardZoneName = shortZone
 
-	if strings.HasSuffix(address.IP.Name, originalZone) {
+	if strings.HasSuffix(address.IP.GetName(), originalZone) {
 		// remove suffix from name
-		address.IP.Name = address.IP.Name[:len(address.IP.Name)-len(originalZone)-1]
+		address.IP.DnsName = address.IP.GetName()[:len(address.IP.GetName())-len(originalZone)-1]
 	}
 
 	if len(cutoff) > 0 {
 		// append the zone cutoff to the name
-		address.IP.Name = fmt.Sprintf("%s.%s", address.IP.Name, cutoff)
+		address.IP.DnsName = fmt.Sprintf("%s.%s", address.IP.GetName(), cutoff)
 	}
 
 	//logger.Printf("%s -> (%s).%s\n", originalName, address.IP.Name, shortZone)
@@ -178,15 +178,9 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 				recordType = Aaaa
 			}
 
-			var name string
-			if address.Name != "" {
-				name = address.Name
-			} else {
-				name = address.Description
-			}
 			putMap(zoneRecordsMap, dnsIP.ForwardZoneName, resourceRecord{
 
-				Name:  name,
+				Name:  address.GetName(),
 				Type:  recordType,
 				RData: ip.String(),
 			})
@@ -195,7 +189,7 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 				putMap(zoneRecordsMap, dnsIP.ForwardZoneName, resourceRecord{
 					Name:  cname,
 					Type:  CName,
-					RData: address.Name,
+					RData: address.GetName(),
 				})
 			}
 		}
@@ -220,7 +214,7 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 
 			name = name[:len(name)-len(zoneName)-1]
 
-			rData := fmt.Sprintf("%s.%s", address.Name, dnsIP.ForwardZoneName)
+			rData := fmt.Sprintf("%s.%s", address.GetName(), dnsIP.ForwardZoneName)
 			rData = strings.TrimRight(rData, ".")
 			rData = rData + "."
 			putMap(zoneRecordsMap, zoneName, resourceRecord{
