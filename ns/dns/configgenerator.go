@@ -1,6 +1,8 @@
 package dns
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -15,23 +17,75 @@ import (
 type zoneType string
 
 const (
-	slave  zoneType = "slave"
-	master zoneType = "master"
+	zoneSlave  zoneType = "slave"
+	zoneMaster zoneType = "master"
 )
 
 type templateZone struct {
-	Name     string
-	Type     zoneType
-	IsSlave  bool
-	MasterIP string
+	Name          string
+	Type          zoneType
+	IsSlave       bool
+	MasterIP      string
+	TransferAcls  []string
+	NotifyMasters []string
+}
+
+type aclMasterType string
+
+const (
+	listAcl    aclMasterType = "acl"
+	listMaster aclMasterType = "master"
+)
+
+type aclMastersList struct {
+	Type    aclMasterType
+	Name    string
+	Entries []string
 }
 
 type configTemplateVars struct {
-	ServerName  string
-	ServerIP    string
-	GeneratedAt string
-	MasterIPs   []string
-	Zones       []templateZone
+	ServerName     string
+	ServerIP       string
+	GeneratedAt    string
+	Zones          []templateZone
+	AclMasterLists []aclMastersList
+}
+
+const defaultAclName = "nx-slaves-acl"
+const defaultMastersName = "nx-slaves-master"
+
+func generateStandardAclMasterLists(masterIps []string) []aclMastersList {
+	return []aclMastersList{
+		{Type: listAcl, Name: defaultAclName, Entries: masterIps},
+		{Type: listMaster, Name: defaultMastersName, Entries: masterIps},
+	}
+}
+
+func canonicalizeZoneName(zone string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(zone))
+	return hex.EncodeToString(hasher.Sum(nil))[:8]
+}
+
+func getAdditionalAclMasterName(zone string, ty aclMasterType) string {
+	canonicalZone := canonicalizeZoneName(zone)
+
+	return fmt.Sprintf("nx-slaves-%s-%s", ty, canonicalZone)
+}
+
+func generateAdditionalAclMasterLists(masterConfig *config.MasterConfig) []aclMastersList {
+	var lists []aclMastersList
+
+	if masterConfig.AdditionalSlaves != nil {
+		for zone, slaves := range masterConfig.AdditionalSlaves {
+			lists = append(lists, []aclMastersList{
+				{Type: listAcl, Name: getAdditionalAclMasterName(zone, listAcl), Entries: slaves},
+				{Type: listMaster, Name: getAdditionalAclMasterName(zone, listMaster), Entries: slaves},
+			}...)
+		}
+	}
+
+	return lists
 }
 
 func GenerateConfigs(zones []string, conf *config.NXConfig) {
@@ -49,13 +103,13 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 	for _, currentMaster := range conf.Namespaces.DNS.Masters {
 		templateVars.ServerName = currentMaster.Name
 		templateVars.ServerIP = currentMaster.IP
-		templateZones := []templateZone{}
+		var templateZones []templateZone
 
 		for _, zonesMaster := range conf.Namespaces.DNS.Masters {
 			isMaster := zonesMaster.Name == currentMaster.Name
-			masterZoneType := master
+			masterZoneType := zoneMaster
 			if !isMaster {
-				masterZoneType = slave
+				masterZoneType = zoneSlave
 			}
 
 			for _, zone := range zonesMaster.Zones {
@@ -63,11 +117,22 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 					continue
 				}
 
+				transferAcls := []string{defaultAclName}
+				notifyMasters := []string{defaultMastersName}
+
+				_, hasAdditionalSlaves := currentMaster.AdditionalSlaves[zone]
+				if hasAdditionalSlaves {
+					transferAcls = append(transferAcls, getAdditionalAclMasterName(zone, listAcl))
+					notifyMasters = append(notifyMasters, getAdditionalAclMasterName(zone, listMaster))
+				}
+
 				templateZones = append(templateZones, templateZone{
-					IsSlave:  !isMaster,
-					MasterIP: zonesMaster.IP,
-					Name:     zone,
-					Type:     masterZoneType,
+					IsSlave:       !isMaster,
+					MasterIP:      zonesMaster.IP,
+					Name:          zone,
+					Type:          masterZoneType,
+					TransferAcls:  transferAcls,
+					NotifyMasters: notifyMasters,
 				})
 			}
 		}
@@ -80,7 +145,10 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 				masterIPsWithoutCurrent = append(masterIPsWithoutCurrent, master.IP)
 			}
 		}
-		templateVars.MasterIPs = masterIPsWithoutCurrent
+
+		aclMastersLists := generateStandardAclMasterLists(masterIPsWithoutCurrent)
+		aclMastersLists = append(aclMastersLists, generateAdditionalAclMasterLists(&currentMaster)...)
+		templateVars.AclMasterLists = aclMastersLists
 
 		_, err = cw.WriteTemplate(
 			fmt.Sprintf("generated/bind-config/%s.conf", currentMaster.Name),

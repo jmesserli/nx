@@ -15,12 +15,15 @@ type ZoneInclude struct {
 	IncludeFiles []string `json:"include_files"`
 }
 
+type AdditionalSlavesConfig = map[string][]string
+
 type MasterConfig struct {
-	Name        string        `json:"name"`
-	IP          string        `json:"ip"`
-	DottedEmail string        `json:"dotted_mail"`
-	Zones       []string      `json:"zones"`
-	Includes    []ZoneInclude `json:"includes"`
+	Name             string                 `json:"name"`
+	IP               string                 `json:"ip"`
+	DottedEmail      string                 `json:"dotted_mail"`
+	Zones            []string               `json:"zones"`
+	Includes         []ZoneInclude          `json:"includes"`
+	AdditionalSlaves AdditionalSlavesConfig `json:"additional_slaves"`
 }
 
 type DNSNamespaceConfig struct {
