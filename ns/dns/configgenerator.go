@@ -34,7 +34,7 @@ type aclMasterType string
 
 const (
 	listAcl    aclMasterType = "acl"
-	listMaster aclMasterType = "master"
+	listMaster aclMasterType = "masters"
 )
 
 type aclMastersList struct {
@@ -52,7 +52,7 @@ type configTemplateVars struct {
 }
 
 const defaultAclName = "nx-slaves-acl"
-const defaultMastersName = "nx-slaves-master"
+const defaultMastersName = "nx-slaves-masters"
 
 func generateStandardAclMasterLists(masterIps []string) []aclMastersList {
 	return []aclMastersList{
