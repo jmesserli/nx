@@ -7,19 +7,23 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"peg.nu/nx/model"
+	"strings"
 
 	"peg.nu/nx/config"
 	"peg.nu/nx/tagparser"
 )
 
 type Client struct {
-	conf config.NXConfig
+	conf   config.NXConfig
+	logger *log.Logger
 }
 
 func New(conf config.NXConfig) Client {
 	return Client{
-		conf: conf,
+		conf:   conf,
+		logger: log.New(os.Stdout, "[client] ", log.LstdFlags),
 	}
 }
 
@@ -43,6 +47,11 @@ func (c Client) performGET(path string, query string) []byte {
 
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
+	bodyStr := string(body)
+	if strings.TrimSpace(bodyStr) == "" {
+		log.Fatal("Empty body returned")
+	}
+	log.Println(fmt.Sprintf("Response: %d - body: \n%s", res.StatusCode, bodyStr))
 
 	return body
 }
@@ -54,7 +63,10 @@ type ipamPrefixResponse struct {
 
 func (c Client) GetIPAMPrefixes() []model.IPAMPrefix {
 	response := ipamPrefixResponse{}
-	json.Unmarshal(c.performGET("/ipam/prefixes/", ""), &response)
+	err := json.Unmarshal(c.performGET("/ipam/prefixes/", ""), &response)
+	if err != nil {
+		panic(err)
+	}
 
 	for i := range response.Results {
 		prefix := &response.Results[i]
@@ -73,7 +85,10 @@ type ipAddressResponse struct {
 
 func (c Client) GetIPAddressesByPrefix(prefix model.IPAMPrefix) []model.IPAddress {
 	response := ipAddressResponse{}
-	json.Unmarshal(c.performGET("/ipam/ip-addresses/", fmt.Sprintf("?parent=%s", url.QueryEscape(prefix.Prefix))), &response)
+	err := json.Unmarshal(c.performGET("/ipam/ip-addresses/", fmt.Sprintf("?parent=%s", url.QueryEscape(prefix.Prefix))), &response)
+	if err != nil {
+		panic(err)
+	}
 
 	for i := range response.Results {
 		ip := &response.Results[i]

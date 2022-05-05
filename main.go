@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -25,6 +26,9 @@ func main() {
 	nc := netbox.New(conf)
 	logger.Println("Loading prefixes")
 	prefixes := nc.GetIPAMPrefixes()
+	if len(prefixes) == 0 {
+		panic(fmt.Errorf("could not load prefixes: 0 prefixes loaded"))
+	}
 
 	var dnsIps, wgIps, iplIps []model.IPAddress
 
