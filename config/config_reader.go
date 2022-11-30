@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 )
 
 type NetboxConfig struct {
@@ -22,6 +22,7 @@ type MasterConfig struct {
 	IP               string                 `json:"ip"`
 	DottedEmail      string                 `json:"dotted_mail"`
 	Zones            []string               `json:"zones"`
+	DnssecZones      []string               `json:"dnssec_zones"`
 	Includes         []ZoneInclude          `json:"includes"`
 	AdditionalSlaves AdditionalSlavesConfig `json:"additional_slaves"`
 }
@@ -41,7 +42,7 @@ type NXConfig struct {
 }
 
 func ReadConfig(path string) NXConfig {
-	fileContent, err := ioutil.ReadFile(path)
+	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
