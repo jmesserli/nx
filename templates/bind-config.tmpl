@@ -29,7 +29,12 @@ zone "{{ $zone.Name }}" {
     allow-transfer { {{ range $transfer := $zone.TransferAcls }}"{{ $transfer }}"; {{ end -}} };
     also-notify { {{ range $master := $zone.NotifyMasters }}"{{ $master }}"; {{ end -}} };
     notify yes;
-	{{- end }}
+	{{- end -}}
+    {{- if and ($zone.IsDnssecEnabled) (not $zone.IsSlave) }}
+    ; This zone is DNSSEC enabled
+    dnssec-policy default;
+    inline-signing yes;
+    {{- end }}
 };
 {{ end }}
 

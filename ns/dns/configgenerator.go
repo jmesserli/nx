@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"text/template"
 	"time"
@@ -22,12 +22,13 @@ const (
 )
 
 type templateZone struct {
-	Name          string
-	Type          zoneType
-	IsSlave       bool
-	MasterIP      string
-	TransferAcls  []string
-	NotifyMasters []string
+	Name            string
+	Type            zoneType
+	IsSlave         bool
+	IsDnssecEnabled bool
+	MasterIP        string
+	TransferAcls    []string
+	NotifyMasters   []string
 }
 
 type aclMasterType string
@@ -89,7 +90,7 @@ func generateAdditionalAclMasterLists(masterConfig *config.MasterConfig) []aclMa
 }
 
 func GenerateConfigs(zones []string, conf *config.NXConfig) {
-	templateString, err := ioutil.ReadFile("templates/bind-config.tmpl")
+	templateString, err := os.ReadFile("templates/bind-config.tmpl")
 	if err != nil {
 		panic(err)
 	}
@@ -126,13 +127,16 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 					notifyMasters = append(notifyMasters, getAdditionalAclMasterName(zone, listMaster))
 				}
 
+				dnssecEnabled := util.SliceContainsString(zonesMaster.DnssecZones, zone)
+
 				templateZones = append(templateZones, templateZone{
-					IsSlave:       !isMaster,
-					MasterIP:      zonesMaster.IP,
-					Name:          zone,
-					Type:          masterZoneType,
-					TransferAcls:  transferAcls,
-					NotifyMasters: notifyMasters,
+					IsSlave:         !isMaster,
+					IsDnssecEnabled: dnssecEnabled,
+					MasterIP:        zonesMaster.IP,
+					Name:            zone,
+					Type:            masterZoneType,
+					TransferAcls:    transferAcls,
+					NotifyMasters:   notifyMasters,
 				})
 			}
 		}
