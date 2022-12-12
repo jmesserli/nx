@@ -1,0 +1,39 @@
+{
+  "netbox": {
+    "url": "https://<NETBOX_HOST>/api",
+    "api_key": "<API_KEY>"
+  },
+  "namespaces": {
+    "dns": {
+      "masters": [
+        {
+          "name": "ns1.example.com",
+          "ip": "192.168.0.1",
+          "dotted_mail": "user.example.com",
+          "zones": [
+            "example.com",
+            "168.192.in-addr.arpa",
+            "f.f.f.f.f.f.f.f.f.f.f.f.ip6.arpa"
+          ],
+          "dnssec_zones": [
+            "f.f.f.f.f.f.f.f.f.f.f.f.ip6.arpa"
+          ],
+          "includes": [
+            {
+              "zone": "example.com",
+              "include_files": [
+                "/etc/bind/zones/include.example.com.db"
+              ]
+            }
+          ],
+          "additional_slaves": {
+            "f.f.f.f.f.f.f.f.f.f.f.f.ip6.arpa": [
+              "ffff:fff:fff::21",
+              "ffff:fff:fff::22"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
