@@ -2,7 +2,7 @@ package ipl
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"peg.nu/nx/cache"
 	"peg.nu/nx/config"
 	"peg.nu/nx/model"
@@ -53,7 +53,7 @@ func GenerateIPLists(addresses []model.IPAddress, conf *config.NXConfig) {
 	now := time.Now()
 	vars := templateVars{GeneratedAt: now.Format(time.RFC3339)}
 
-	templateString, err := ioutil.ReadFile("templates/ip-list.tmpl")
+	templateString, err := os.ReadFile("templates/ip-list.tmpl")
 	if err != nil {
 		panic(err)
 	}

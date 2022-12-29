@@ -2,7 +2,7 @@ package wg
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"peg.nu/nx/model"
 	"regexp"
 	"text/template"
@@ -58,7 +58,7 @@ func GenerateWgConfigs(ips []model.IPAddress, conf *config.NXConfig) {
 		putMap(vpnPeers, ip.Prefix.EnOptions.WGVpnName, parsedIp{IP: ip, peer: peer})
 	}
 
-	templateString, err := ioutil.ReadFile("templates/wg-config.tmpl")
+	templateString, err := os.ReadFile("templates/wg-config.tmpl")
 	if err != nil {
 		panic(err)
 	}

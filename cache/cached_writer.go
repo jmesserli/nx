@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -34,7 +33,7 @@ func New(hashFile string) *CachedTemplateWriter {
 		}
 	}
 
-	jsonBytes, err := ioutil.ReadFile(hashFile)
+	jsonBytes, err := os.ReadFile(hashFile)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +89,13 @@ func (w *CachedTemplateWriter) WriteTemplate(
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+
+	defer func(closeable io.Closer) {
+		err := closeable.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(f)
 
 	var writer io.Writer
 	if useTabbedWriter {

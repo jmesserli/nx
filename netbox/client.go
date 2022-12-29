@@ -3,7 +3,7 @@ package netbox
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -34,8 +34,8 @@ func (c Client) performGET(path string, query string) []byte {
 		query = query + "&limit=2000"
 	}
 
-	url := fmt.Sprintf("%v%v%v", c.conf.Netbox.URL, path, query)
-	req, _ := http.NewRequest("GET", url, nil)
+	requestUrl := fmt.Sprintf("%v%v%v", c.conf.Netbox.URL, path, query)
+	req, _ := http.NewRequest("GET", requestUrl, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Token %v", c.conf.Netbox.ApiKey))
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -45,8 +45,14 @@ func (c Client) performGET(path string, query string) []byte {
 		log.Fatal(fmt.Errorf("netbox returned a non 200 status code: %s", res.Status))
 	}
 
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	defer func(closeable io.Closer) {
+		err := closeable.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(res.Body)
+
+	body, _ := io.ReadAll(res.Body)
 	bodyStr := string(body)
 	if strings.TrimSpace(bodyStr) == "" {
 		log.Fatal("Empty body returned")

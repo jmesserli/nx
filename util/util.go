@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -30,13 +29,13 @@ func ExpandIPv6(ip net.IP) string {
 }
 
 func CleanDirectoryExcept(directory string, exceptions []string, conf *config.NXConfig) {
-	fileInfos, err := ioutil.ReadDir(directory)
+	dirEntries, err := os.ReadDir(directory)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, fileInfo := range fileInfos {
-		name := fmt.Sprintf("%s/%s", directory, fileInfo.Name())
+	for _, dirEntry := range dirEntries {
+		name := fmt.Sprintf("%s/%s", directory, dirEntry.Name())
 		if SliceContainsString(exceptions, name) {
 			continue
 		}
