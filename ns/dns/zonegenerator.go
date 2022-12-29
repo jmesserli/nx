@@ -2,7 +2,6 @@ package dns
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -116,10 +115,10 @@ func putMap(theMap map[string][]resourceRecord, key string, value resourceRecord
 	}
 }
 
-func ipToNibble(cidr string, minimal bool) (string, error) {
+func ipToNibble(cidr string, minimal bool) (string, bool, error) {
 	ip, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	isIP4 := strings.Count(ip.String(), ":") < 2
 
@@ -132,7 +131,7 @@ func ipToNibble(cidr string, minimal bool) (string, error) {
 			reverse = reverse[len(reverse)-prefixParts:]
 		}
 		joined := strings.Join(reverse, ".")
-		return fmt.Sprintf("%s.in-addr.arpa", joined), nil
+		return fmt.Sprintf("%s.in-addr.arpa", joined), isIP4, nil
 	}
 	// else IPv6
 	split := strings.Split(util.ExpandIPv6(ip), "")
@@ -142,7 +141,7 @@ func ipToNibble(cidr string, minimal bool) (string, error) {
 		prefixParts := prefixSize / 4
 		reverse = reverse[len(reverse)-prefixParts:]
 	}
-	return fmt.Sprintf("%s.ip6.arpa", strings.Join(reverse, ".")), nil
+	return fmt.Sprintf("%s.ip6.arpa", strings.Join(reverse, ".")), isIP4, nil
 }
 
 // GenerateZones generates the BIND zonefiles
@@ -195,7 +194,7 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		}
 
 		if len(dnsIP.ReverseZoneName) > 0 {
-			zoneName, err := ipToNibble(dnsIP.ReverseZoneName, true)
+			zoneName, reverseZoneV4, err := ipToNibble(dnsIP.ReverseZoneName, true)
 			if err != nil {
 				logger.Printf("Could not parse cidr <%v> of %v", dnsIP.ReverseZoneName, address)
 				continue
@@ -206,9 +205,14 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 				tagparser.ParseTags(&dnsIP, address.Prefix.Tags, []model.Tag{})
 			}
 
-			name, err := ipToNibble(address.Address, false)
+			name, addressV4, err := ipToNibble(address.Address, false)
 			if err != nil {
 				logger.Printf("Could not parse cidr <%v> of %v", address.Address, address)
+				continue
+			}
+
+			if reverseZoneV4 != addressV4 {
+				logger.Printf("IP to reverse zone family mismatch! IP: %v (isV4: %v), Reverse Zone: %v (isV4: %v)", address.Address, addressV4, dnsIP.ReverseZoneName, reverseZoneV4)
 				continue
 			}
 
@@ -229,7 +233,7 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		GeneratedAt: t.Format(time.RFC3339),
 	}
 
-	templateString, err := ioutil.ReadFile("templates/bind-zone.tmpl")
+	templateString, err := os.ReadFile("templates/bind-zone.tmpl")
 	if err != nil {
 		panic(err)
 	}

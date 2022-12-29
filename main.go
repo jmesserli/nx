@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"peg.nu/nx/model"
@@ -37,7 +36,7 @@ func main() {
 	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, conf)
 
 	logger.Println("Writing updated files report")
-	err := ioutil.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
+	err := os.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
 	if err != nil {
 		logger.Fatal(err)
 	}
