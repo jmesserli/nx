@@ -2,7 +2,6 @@ package tagparser
 
 import (
 	"fmt"
-	"peg.nu/nx/model"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -29,7 +28,11 @@ func (f annotatedField) getRegex() *regexp.Regexp {
 	return f.regex
 }
 
-func ParseTags(data interface{}, tags, parentTags []model.Tag) {
+type NamedTag interface {
+	GetName() string
+}
+
+func ParseTags[D any, T NamedTag](data D, tags, parentTags []T) {
 	t := reflect.TypeOf(data)
 
 	if t.Kind() != reflect.Ptr {
@@ -81,12 +84,12 @@ func ParseTags(data interface{}, tags, parentTags []model.Tag) {
 	}
 }
 
-func findValueForField(field annotatedField, tags []model.Tag) (interface{}, error) {
+func findValueForField[T NamedTag](field annotatedField, tags []T) (interface{}, error) {
 	rex := field.getRegex()
 
 	strValues := make([]string, 0)
 	for _, tag := range tags {
-		match := rex.FindStringSubmatch(tag.Name)
+		match := rex.FindStringSubmatch(tag.GetName())
 		if match == nil {
 			continue
 		}

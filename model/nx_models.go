@@ -1,25 +1,28 @@
 package model
 
-type EnableOptions struct {
-	DNSEnabled bool   `nx:"enable,ns:dns"`
-	WGVpnName  string `nx:"mesh,ns:wg"`
-	IPLEnabled bool   `nx:"enable,ns:ipl"`
+type Configuration struct {
+	DnsEnabled     bool     `nx:"enable,ns:dns"`
+	DnsForwardZone string   `nx:"forward_zone,ns:dns"`
+	DnsReverseZone string   `nx:"reverse_zone,ns:dns"`
+	DnsCNames      []string `nx:"cname,ns:dns"`
+
+	IpListsEnabled bool     `nx:"enable,ns:ipl"`
+	IpLists        []string `nx:"list,ns:ipl"`
 }
 
 type IPAMPrefix struct {
-	ID     int    `json:"id"`
 	Prefix string `json:"prefix"`
 	Tags   []Tag  `json:"tags"`
 
-	EnOptions EnableOptions
+	Config Configuration
 }
 
 type Tag struct {
-	ID    int    `json:"id"`
-	URL   string `json:"url"`
-	Name  string `json:"name"`
-	Slug  string `json:"slug"`
-	Color string `json:"color"`
+	Name string `json:"name"`
+}
+
+func (t Tag) GetName() string {
+	return t.Name
 }
 
 type IPAddress struct {
@@ -29,6 +32,7 @@ type IPAddress struct {
 	Description string `json:"description"`
 	Tags        []Tag  `json:"tags"`
 	Prefix      *IPAMPrefix
+	Config      Configuration
 }
 
 func (i IPAddress) GetName() string {

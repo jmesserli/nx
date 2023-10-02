@@ -14,7 +14,6 @@ import (
 	"peg.nu/nx/config"
 	"peg.nu/nx/netbox"
 	"peg.nu/nx/ns/dns"
-	"peg.nu/nx/ns/wg"
 )
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
@@ -29,11 +28,11 @@ func main() {
 		panic(fmt.Errorf("could not load prefixes: 0 prefixes loaded"))
 	}
 
-	var dnsIps, wgIps, iplIps []model.IPAddress
+	var dnsIps, iplIps []model.IPAddress
 
 	prefixIPsList := loadPrefixes(prefixes, nc)
 	sortPrefixList(prefixIPsList)
-	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, conf)
+	generateAll(prefixIPsList, dnsIps, iplIps, conf)
 
 	logger.Println("Writing updated files report")
 	err := os.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
@@ -51,7 +50,7 @@ func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
 	var prefixIPsList []prefixIPs
 	var prefixIPchan = make(chan prefixIPs)
 	for _, prefix := range prefixes {
-		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0 || prefix.EnOptions.IPLEnabled) {
+		if !(prefix.Config.DnsEnabled || prefix.Config.IpListsEnabled) {
 			//logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
 			continue
 		}
@@ -78,17 +77,14 @@ func sortPrefixList(prefixIPsList []prefixIPs) {
 	}
 }
 
-func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []model.IPAddress, iplIps []model.IPAddress, conf config.NXConfig) {
+func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, iplIps []model.IPAddress, conf config.NXConfig) {
 	defer util.DurationSince(util.StartTracking("generateAll"))
 
 	for _, prefixIP := range prefixIPsList {
-		if prefixIP.prefix.EnOptions.DNSEnabled {
+		if prefixIP.prefix.Config.DnsEnabled {
 			dnsIps = append(dnsIps, prefixIP.ips...)
 		}
-		if len(prefixIP.prefix.EnOptions.WGVpnName) > 0 {
-			wgIps = append(wgIps, prefixIP.ips...)
-		}
-		if prefixIP.prefix.EnOptions.IPLEnabled {
+		if prefixIP.prefix.Config.IpListsEnabled {
 			iplIps = append(iplIps, prefixIP.ips...)
 		}
 	}
@@ -107,8 +103,6 @@ func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []mo
 
 	logger.Println("Generating BIND config files")
 	dns.GenerateConfigs(generatedZones, &conf)
-	logger.Println("Generating Wireguard config files")
-	wg.GenerateWgConfigs(wgIps, &conf)
 	logger.Println("Generating IP lists")
 	ipl.GenerateIPLists(iplIps, &conf)
 }
@@ -120,7 +114,7 @@ type prefixIPs struct {
 
 func getIPsForPrefix(nc netbox.Client, prefix model.IPAMPrefix, ch chan prefixIPs) {
 	//logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
-	addresses := nc.GetIPAddressesByPrefix(prefix)
+	addresses := nc.GetIPAddresses(prefix)
 
 	ch <- prefixIPs{
 		prefix: prefix,
