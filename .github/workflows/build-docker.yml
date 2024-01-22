@@ -66,8 +66,8 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        tags: ${{ steps.meta.output.tags }}
-        labels: ${{ steps.meta.output.labels }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
         push: ${{ github.event_name != 'pull_request' }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
