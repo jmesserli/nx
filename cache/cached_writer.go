@@ -24,24 +24,30 @@ type CachedTemplateWriter struct {
 	UpdatedFiles   []string
 }
 
+func empty(hashFile string) *CachedTemplateWriter {
+	return &CachedTemplateWriter{
+		hashFile:   hashFile,
+		fileHashes: map[string]string{},
+		newHashes:  map[string]string{},
+	}
+}
+
 func New(hashFile string) *CachedTemplateWriter {
 	if _, err := os.Stat(hashFile); os.IsNotExist(err) {
-		return &CachedTemplateWriter{
-			hashFile:   hashFile,
-			fileHashes: map[string]string{},
-			newHashes:  map[string]string{},
-		}
+		return empty(hashFile)
 	}
 
 	jsonBytes, err := os.ReadFile(hashFile)
 	if err != nil {
-		panic(err)
+		logger.Println("could not open json hash file, discarding")
+		return empty(hashFile)
 	}
 
 	data := map[string]string{}
 	err = json.Unmarshal(jsonBytes, &data)
 	if err != nil {
-		panic(err)
+		logger.Println("could not parse json hash file, discarding")
+		return empty(hashFile)
 	}
 
 	return &CachedTemplateWriter{

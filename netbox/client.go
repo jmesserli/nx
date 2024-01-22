@@ -57,7 +57,7 @@ func (c Client) performGET(path string, query string) []byte {
 	if strings.TrimSpace(bodyStr) == "" {
 		log.Fatal("Empty body returned")
 	}
-	log.Println(fmt.Sprintf("Response: %d - body: \n%s", res.StatusCode, bodyStr))
+	//log.Println(fmt.Sprintf("Response: %d - body: \n%s", res.StatusCode, bodyStr))
 
 	return body
 }
