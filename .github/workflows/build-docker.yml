@@ -10,7 +10,9 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+
     permissions:
+      contents: read
       packages: write
 
     steps:
@@ -41,18 +43,27 @@ jobs:
     - name: Docker Login
       uses: docker/login-action@v3.0.0
       with:
-        registry: ghcr.io
+        registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-        
+
+    - name: Docker Metadata action
+      id: meta
+      uses: docker/metadata-action@v5.5.0
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=raw,value=${{ github.run_number }}
+          type=raw,value=latest
+          type=sha
+          
     - name: Build Docker image
       uses: docker/build-push-action@v5.1.0
       with:
         context: .
         file: ./Dockerfile
-        tags: |
-          ghcr.io/${{ github.repository }}:${{ github.run_number }}
-          ghcr.io/${{ github.repository }}:latest
+        tags: ${{ steps.meta.output.tags }}
+        labels: ${{ steps.meta.output.labels }}
         push: ${{ github.event_name != 'pull_request' }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
