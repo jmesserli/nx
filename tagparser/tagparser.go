@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+const NoValueErrStr = "no value available"
+
 var tagRegex = regexp.MustCompile("^(\\w+),ns:(\\w+)$")
 
 type annotatedField struct {
@@ -103,7 +105,7 @@ func findValueForField(field annotatedField, tags []model.Tag) (interface{}, err
 
 		if sKind == reflect.String {
 			if len(strValues) == 0 {
-				return nil, fmt.Errorf("no value available")
+				return nil, fmt.Errorf(NoValueErrStr)
 			}
 			return strValues, nil
 		} else if sKind == reflect.Int {
@@ -123,14 +125,14 @@ func findValueForField(field annotatedField, tags []model.Tag) (interface{}, err
 	} else if fKind == reflect.String {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for string field <%s>. Returning empty string.\n", field.sField.Name)
-			return "", fmt.Errorf("no value available")
+			return "", fmt.Errorf(NoValueErrStr)
 		}
 
 		return strValues[0], nil
 	} else if fKind == reflect.Int {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-			return 0, fmt.Errorf("no value available")
+			return 0, fmt.Errorf(NoValueErrStr)
 		}
 
 		for _, val := range strValues {
@@ -144,11 +146,11 @@ func findValueForField(field annotatedField, tags []model.Tag) (interface{}, err
 		}
 
 		//fmt.Printf("warn: No values available for int field <%s>. Returning 0.\n", field.sField.Name)
-		return 0, fmt.Errorf("no value available")
+		return 0, fmt.Errorf(NoValueErrStr)
 	} else if fKind == reflect.Bool {
 		if len(strValues) == 0 {
 			//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
-			return false, fmt.Errorf("no value available")
+			return false, fmt.Errorf(NoValueErrStr)
 		}
 
 		for _, val := range strValues {
@@ -162,7 +164,7 @@ func findValueForField(field annotatedField, tags []model.Tag) (interface{}, err
 		}
 
 		//fmt.Printf("warn: No values available for bool field <%s>. Returning false.\n", field.sField.Name)
-		return false, fmt.Errorf("no value available")
+		return false, fmt.Errorf(NoValueErrStr)
 	}
 
 	panic(fmt.Sprintf("Unsupported field type <%v>", fKind))
