@@ -40,6 +40,9 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
+	if len(conf.UpdatedFiles) > 0 {
+		err = os.WriteFile("generated/last_modified.txt", []byte(time.Now().Format(time.RFC3339)), os.ModePerm)
+	}
 }
 
 func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
