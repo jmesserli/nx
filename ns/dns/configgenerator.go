@@ -95,8 +95,10 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 		panic(err)
 	}
 	configTemplate := template.Must(template.New("config").Parse(string(templateString)))
-	cw := cache.New("generated/hashes/bind-config.json")
-	ignoreRegex := regexp.MustCompile("(?m)^ \\* Generated at.*$")
+	ignoreRegexes := []*regexp.Regexp{
+		regexp.MustCompile("(?m)^ \\* Generated at.*$"),
+	}
+	cw := cache.New(configTemplate, ignoreRegexes, false)
 
 	templateVars := configTemplateVars{
 		GeneratedAt: time.Now().Format(time.RFC3339),
@@ -156,10 +158,7 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 
 		_, err = cw.WriteTemplate(
 			fmt.Sprintf("generated/bind-config/%s.conf", currentMaster.Name),
-			configTemplate,
 			templateVars,
-			[]*regexp.Regexp{ignoreRegex},
-			false,
 		)
 		if err != nil {
 			panic(err)

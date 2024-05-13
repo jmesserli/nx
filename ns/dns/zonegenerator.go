@@ -238,9 +238,11 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		panic(err)
 	}
 	zoneTemplate := template.Must(template.New("zone").Parse(string(templateString)))
-
-	cw := cache.New("generated/hashes/zones.json")
-	ignoreRegex := regexp.MustCompile("(?m)^(\\s+\\d+\\s+; serial.*|; Generated at .*)$")
+	ignoreRegexes := []*regexp.Regexp{
+		regexp.MustCompile("(?m)^; Generated at .*$"),
+		regexp.MustCompile("(?m)^\\s+\\d+\\s+; serial.*$"),
+	}
+	cw := cache.New(zoneTemplate, ignoreRegexes, true)
 
 	for zone, records := range zoneRecordsMap {
 		templateArgs.Records = records
@@ -264,10 +266,7 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 
 		_, err := cw.WriteTemplate(
 			fmt.Sprintf("generated/zones/%s.db", zone),
-			zoneTemplate,
 			templateArgs,
-			[]*regexp.Regexp{ignoreRegex},
-			true,
 		)
 		if err != nil {
 			panic(err)
