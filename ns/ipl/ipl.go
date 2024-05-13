@@ -58,9 +58,11 @@ func GenerateIPLists(addresses []model.IPAddress, conf *config.NXConfig) {
 		panic(err)
 	}
 	iplTemplate := template.Must(template.New("ipl").Parse(string(templateString)))
+	ignoreRegexes := []*regexp.Regexp{
+		regexp.MustCompile("(?m)^# Generated at .*$"),
+	}
 
-	cw := cache.New("generated/hashes/ipl.json")
-	ignoreRegex := regexp.MustCompile("(?m)^# Generated at .*$")
+	cw := cache.New(iplTemplate, ignoreRegexes, false)
 
 	for group, ips := range groupMap {
 		vars.Name = group
@@ -68,10 +70,7 @@ func GenerateIPLists(addresses []model.IPAddress, conf *config.NXConfig) {
 
 		_, err := cw.WriteTemplate(
 			fmt.Sprintf("generated/ipl/%s.ipl.txt", group),
-			iplTemplate,
 			vars,
-			[]*regexp.Regexp{ignoreRegex},
-			false,
 		)
 		if err != nil {
 			panic(err)

@@ -33,7 +33,7 @@ func main() {
 
 	prefixIPsList := loadPrefixes(prefixes, nc)
 	sortPrefixList(prefixIPsList)
-	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, conf)
+	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, &conf)
 
 	logger.Println("Writing updated files report")
 	err := os.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
@@ -78,7 +78,7 @@ func sortPrefixList(prefixIPsList []prefixIPs) {
 	}
 }
 
-func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []model.IPAddress, iplIps []model.IPAddress, conf config.NXConfig) {
+func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []model.IPAddress, iplIps []model.IPAddress, conf *config.NXConfig) {
 	defer util.DurationSince(util.StartTracking("generateAll"))
 
 	for _, prefixIP := range prefixIPsList {
@@ -103,14 +103,14 @@ func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []mo
 
 		DottedMailResponsible: "unknown\\.admin.local",
 		NameserverFQDN:        "unknown-nameserver.local.",
-	}, &conf)
+	}, conf)
 
 	logger.Println("Generating BIND config files")
-	dns.GenerateConfigs(generatedZones, &conf)
+	dns.GenerateConfigs(generatedZones, conf)
 	logger.Println("Generating Wireguard config files")
-	wg.GenerateWgConfigs(wgIps, &conf)
+	wg.GenerateWgConfigs(wgIps, conf)
 	logger.Println("Generating IP lists")
-	ipl.GenerateIPLists(iplIps, &conf)
+	ipl.GenerateIPLists(iplIps, conf)
 }
 
 type prefixIPs struct {

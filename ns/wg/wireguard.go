@@ -62,8 +62,8 @@ func GenerateWgConfigs(ips []model.IPAddress, conf *config.NXConfig) {
 	if err != nil {
 		panic(err)
 	}
-	zoneTemplate := template.Must(template.New("wg-config").Parse(string(templateString)))
-	cw := cache.New("generated/hashes/wg.json")
+	wgTemplate := template.Must(template.New("wg-config").Parse(string(templateString)))
+	cw := cache.New(wgTemplate, []*regexp.Regexp{}, false)
 
 	for vpnName, peers := range vpnPeers {
 		for _, peer := range peers {
@@ -82,11 +82,8 @@ func GenerateWgConfigs(ips []model.IPAddress, conf *config.NXConfig) {
 			}
 
 			_, err := cw.WriteTemplate(
-				fmt.Sprintf("generated/wg/%s_%s.conf", vpnName, data.ServerName),
-				zoneTemplate,
+				fmt.Sprintf("generated/wg/%s-%s.conf", vpnName, data.ServerName),
 				data,
-				[]*regexp.Regexp{},
-				false,
 			)
 			if err != nil {
 				panic(err)

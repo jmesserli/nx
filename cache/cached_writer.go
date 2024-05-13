@@ -3,12 +3,12 @@ package cache
 import (
 	"bytes"
 	"crypto/sha1"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"regexp"
+	"strings"
 	"text/tabwriter"
 	"text/template"
 )
@@ -16,86 +16,68 @@ import (
 var logger = log.New(os.Stdout, "[cached_writer] ", log.LstdFlags)
 
 type CachedTemplateWriter struct {
-	hashFile       string
-	fileHashes     map[string]string
-	newHashes      map[string]string
-	buf            bytes.Buffer
-	ProcessedFiles []string
-	UpdatedFiles   []string
+	template        *template.Template
+	ignorePatterns  []*regexp.Regexp
+	useTabbedWriter bool
+	newHashes       map[string]string
+	ProcessedFiles  []string
+	UpdatedFiles    []string
 }
 
-func empty(hashFile string) *CachedTemplateWriter {
+func New(template *template.Template, ignorePatterns []*regexp.Regexp, useTabbedWriter bool) *CachedTemplateWriter {
 	return &CachedTemplateWriter{
-		hashFile:   hashFile,
-		fileHashes: map[string]string{},
-		newHashes:  map[string]string{},
+		template:        template,
+		ignorePatterns:  ignorePatterns,
+		useTabbedWriter: useTabbedWriter,
+		newHashes:       map[string]string{},
 	}
 }
 
-func New(hashFile string) *CachedTemplateWriter {
-	if _, err := os.Stat(hashFile); os.IsNotExist(err) {
-		return empty(hashFile)
-	}
-
-	jsonBytes, err := os.ReadFile(hashFile)
-	if err != nil {
-		logger.Println("could not open json hash file, discarding")
-		return empty(hashFile)
-	}
-
-	data := map[string]string{}
-	err = json.Unmarshal(jsonBytes, &data)
-	if err != nil {
-		logger.Println("could not parse json hash file, discarding")
-		return empty(hashFile)
-	}
-
-	return &CachedTemplateWriter{
-		hashFile:   hashFile,
-		fileHashes: data,
-		newHashes:  map[string]string{},
-	}
-}
-
-func (w *CachedTemplateWriter) WriteTemplate(
+func (cw *CachedTemplateWriter) WriteTemplate(
 	file string,
-	tpl *template.Template,
 	data interface{},
-	ignorePatterns []*regexp.Regexp,
-	useTabbedWriter bool,
 ) (bool, error) {
-	// Reset buffer
-	w.buf = bytes.Buffer{}
+	buf := bytes.Buffer{}
+	err := func() error {
+		var bufWriter io.Writer
+		if cw.useTabbedWriter {
+			tw := tabwriter.NewWriter(&buf, 2, 2, 2, ' ', 0)
+			bufWriter = tw
+			defer tw.Flush()
+		} else {
+			bufWriter = &buf
+		}
 
-	err := tpl.Execute(&w.buf, data)
+		err := cw.template.Execute(bufWriter, data)
+		if err != nil {
+			return err
+		}
+		return nil
+	}()
 	if err != nil {
 		return false, err
 	}
 
-	str := string(w.buf.Bytes())
-	for _, regex := range ignorePatterns {
-		str = regex.ReplaceAllString(str, "-hash:omit-")
-	}
+	str := string(buf.Bytes())
+	hashStr := cw.hash(str)
 
-	hash := sha1.New()
-	hash.Write([]byte(str))
-	hashBytes := hash.Sum(nil)
-	hashStr := fmt.Sprintf("%x", hashBytes)
-
-	existingHash, ok := w.fileHashes[file]
-	if ok && existingHash == hashStr {
-		//logger.Printf("File fresh: %s\n", file)
-		w.ProcessedFiles = append(w.ProcessedFiles, file)
-		w.newHashes[file] = w.fileHashes[file]
-		w.updateJson()
-		return false, nil
+	existingFileStr, err := cw.getFileContent(file)
+	if err == nil {
+		existingHash := cw.hash(existingFileStr)
+		if existingHash == hashStr {
+			//logger.Printf("File fresh: %s\n", file)
+			cw.ProcessedFiles = append(cw.ProcessedFiles, file)
+			cw.newHashes[file] = existingHash
+			return false, nil
+		}
+	} else {
+		logger.Printf("ignored error while reading existing file %s: %s\n", file, err.Error())
 	}
 
 	f, err := os.Create(file)
 	if err != nil {
 		return false, err
 	}
-
 	defer func(closeable io.Closer) {
 		err := closeable.Close()
 		if err != nil {
@@ -103,52 +85,47 @@ func (w *CachedTemplateWriter) WriteTemplate(
 		}
 	}(f)
 
-	var writer io.Writer
-	if useTabbedWriter {
-		writer = tabwriter.NewWriter(f, 2, 2, 2, ' ', 0)
-	} else {
-		writer = f
-	}
-
-	if useTabbedWriter {
-		wr := tabwriter.NewWriter(f, 2, 2, 2, ' ', 0)
-		_, err = wr.Write(w.buf.Bytes())
-		if err != nil {
-			return false, err
-		}
-		_ = wr.Flush()
-	} else {
-		_, err = writer.Write(w.buf.Bytes())
-		if err != nil {
-			return false, err
-		}
+	_, err = f.Write(buf.Bytes())
+	if err != nil {
+		return false, err
 	}
 
 	logger.Printf("New hash %s for file %s\n", hashStr, file)
-	w.ProcessedFiles = append(w.ProcessedFiles, file)
-	w.UpdatedFiles = append(w.UpdatedFiles, file)
-	w.fileHashes[file] = hashStr
-	w.newHashes[file] = hashStr
-	w.updateJson()
+	cw.ProcessedFiles = append(cw.ProcessedFiles, file)
+	cw.UpdatedFiles = append(cw.UpdatedFiles, file)
+	cw.newHashes[file] = hashStr
 
 	return true, nil
 }
 
-func (w *CachedTemplateWriter) updateJson() {
-	jsonBytes, err := json.Marshal(w.newHashes)
+func (cw *CachedTemplateWriter) getFileContent(file string) (string, error) {
+	stat, err := os.Stat(file)
 	if err != nil {
-		panic(err)
+		return "", err
+	}
+	if stat.IsDir() {
+		return "", fmt.Errorf("%s is a directory", file)
 	}
 
-	f, err := os.Create(w.hashFile)
+	fileBytes, err := os.ReadFile(file)
 	if err != nil {
-		panic(err)
+		return "", err
+	}
+	return string(fileBytes), nil
+}
+
+func (cw *CachedTemplateWriter) hash(content string) string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.TrimSpace(content)
+
+	if cw.ignorePatterns != nil {
+		for _, regex := range cw.ignorePatterns {
+			content = regex.ReplaceAllString(content, "-hash:omit-")
+		}
 	}
 
-	_, err = f.Write(jsonBytes)
-	if err != nil {
-		panic(err)
-	}
-
-	_ = f.Close()
+	hash := sha1.New()
+	hash.Write([]byte(content))
+	hashBytes := hash.Sum(nil)
+	return fmt.Sprintf("%x", hashBytes)
 }
