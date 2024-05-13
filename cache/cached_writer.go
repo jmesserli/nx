@@ -41,9 +41,8 @@ func (cw *CachedTemplateWriter) WriteTemplate(
 	err := func() error {
 		var bufWriter io.Writer
 		if cw.useTabbedWriter {
-			tw := tabwriter.NewWriter(&buf, 2, 2, 2, ' ', 0)
-			bufWriter = tw
-			defer tw.Flush()
+			bufWriter = tabwriter.NewWriter(&buf, 2, 2, 2, ' ', 0)
+			defer bufWriter.(*tabwriter.Writer).Flush()
 		} else {
 			bufWriter = &buf
 		}
