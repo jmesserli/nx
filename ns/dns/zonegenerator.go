@@ -249,13 +249,13 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		templateArgs.ZoneName = zone
 
 		soaInfo := defaultSoaInfo
-		masterConf := util.FindMasterForZone(*conf, zone)
-		if masterConf != nil {
-			soaInfo.DottedMailResponsible = masterConf.DottedEmail
-			soaInfo.NameserverFQDN = fmt.Sprintf("%s.", masterConf.Name)
+		primaryConf := util.FindPrimaryForZone(*conf, zone)
+		if primaryConf != nil {
+			soaInfo.DottedMailResponsible = primaryConf.DottedEmail
+			soaInfo.NameserverFQDN = fmt.Sprintf("%s.", primaryConf.Name)
 
 			var includes []string
-			for _, include := range masterConf.Includes {
+			for _, include := range primaryConf.Includes {
 				if include.Zone == zone {
 					includes = append(includes, include.IncludeFiles...)
 				}

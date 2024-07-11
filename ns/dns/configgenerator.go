@@ -17,48 +17,54 @@ import (
 type zoneType string
 
 const (
-	zoneSlave  zoneType = "slave"
-	zoneMaster zoneType = "master"
+	zoneSecondary zoneType = "slave"
+	zonePrimary   zoneType = "master"
 )
 
 type templateZone struct {
 	Name            string
 	Type            zoneType
-	IsSlave         bool
+	IsSecondary     bool
 	IsDnssecEnabled bool
-	MasterIP        string
+	PrimaryIP       string
+	PrimaryPort     int
 	TransferAcls    []string
-	NotifyMasters   []string
+	NotifyPrimaries []string
 }
 
-type aclMasterType string
+type aclPrimaryType string
 
 const (
-	listAcl    aclMasterType = "acl"
-	listMaster aclMasterType = "masters"
+	listAcl       aclPrimaryType = "acl"
+	listPrimaries aclPrimaryType = "masters"
 )
 
-type aclMastersList struct {
-	Type    aclMasterType
+type primaryIPAndPort struct {
+	IP   string
+	Port int
+}
+
+type aclPrimaryList struct {
+	Type    aclPrimaryType
 	Name    string
-	Entries []string
+	Entries []primaryIPAndPort
 }
 
 type configTemplateVars struct {
-	ServerName     string
-	ServerIP       string
-	GeneratedAt    string
-	Zones          []templateZone
-	AclMasterLists []aclMastersList
+	ServerName      string
+	ServerIP        string
+	GeneratedAt     string
+	Zones           []templateZone
+	AclPrimaryLists []aclPrimaryList
 }
 
-const defaultAclName = "nx-slaves-acl"
-const defaultMastersName = "nx-slaves-masters"
+const defaultAclName = "nx-secondary-acl"
+const defaultPrimariesName = "nx-secondary-primaries"
 
-func generateStandardAclMasterLists(masterIps []string) []aclMastersList {
-	return []aclMastersList{
-		{Type: listAcl, Name: defaultAclName, Entries: masterIps},
-		{Type: listMaster, Name: defaultMastersName, Entries: masterIps},
+func generateStandardAclPrimaryLists(primaries []primaryIPAndPort) []aclPrimaryList {
+	return []aclPrimaryList{
+		{Type: listAcl, Name: defaultAclName, Entries: primaries},
+		{Type: listPrimaries, Name: defaultPrimariesName, Entries: primaries},
 	}
 }
 
@@ -68,20 +74,25 @@ func canonicalizeZoneName(zone string) string {
 	return hex.EncodeToString(hasher.Sum(nil))[:8]
 }
 
-func getAdditionalAclMasterName(zone string, ty aclMasterType) string {
+func getAdditionalAclPrimaryName(zone string, ty aclPrimaryType) string {
 	canonicalZone := canonicalizeZoneName(zone)
 
-	return fmt.Sprintf("nx-slaves-%s-%s", ty, canonicalZone)
+	return fmt.Sprintf("nx-secondary-%s-%s", ty, canonicalZone)
 }
 
-func generateAdditionalAclMasterLists(masterConfig *config.MasterConfig) []aclMastersList {
-	var lists []aclMastersList
+func generateAdditionalAclPrimaryLists(primaryConfig *config.PrimaryConfig) []aclPrimaryList {
+	var lists []aclPrimaryList
 
-	if masterConfig.AdditionalSlaves != nil {
-		for zone, slaves := range masterConfig.AdditionalSlaves {
-			lists = append(lists, []aclMastersList{
-				{Type: listAcl, Name: getAdditionalAclMasterName(zone, listAcl), Entries: slaves},
-				{Type: listMaster, Name: getAdditionalAclMasterName(zone, listMaster), Entries: slaves},
+	if primaryConfig.AdditionalSecondaries != nil {
+		for zone, secondaries := range primaryConfig.AdditionalSecondaries {
+			var secondariesWithPorts []primaryIPAndPort
+			for _, secondary := range secondaries {
+				secondariesWithPorts = append(secondariesWithPorts, primaryIPAndPort{IP: secondary}) // port is empty for now
+			}
+
+			lists = append(lists, []aclPrimaryList{
+				{Type: listAcl, Name: getAdditionalAclPrimaryName(zone, listAcl), Entries: secondariesWithPorts},
+				{Type: listPrimaries, Name: getAdditionalAclPrimaryName(zone, listPrimaries), Entries: secondariesWithPorts},
 			}...)
 		}
 	}
@@ -103,61 +114,62 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 	templateVars := configTemplateVars{
 		GeneratedAt: time.Now().Format(time.RFC3339),
 	}
-	for _, currentMaster := range conf.Namespaces.DNS.Masters {
-		templateVars.ServerName = currentMaster.Name
-		templateVars.ServerIP = currentMaster.IP
+	for _, currentPrimary := range conf.Namespaces.DNS.Primaries {
+		templateVars.ServerName = currentPrimary.Name
+		templateVars.ServerIP = currentPrimary.IP
 		var templateZones []templateZone
 
-		for _, zonesMaster := range conf.Namespaces.DNS.Masters {
-			isMaster := zonesMaster.Name == currentMaster.Name
-			masterZoneType := zoneMaster
-			if !isMaster {
-				masterZoneType = zoneSlave
+		for _, zonesPrimary := range conf.Namespaces.DNS.Primaries {
+			isPrimary := zonesPrimary.Name == currentPrimary.Name
+			serverZoneType := zonePrimary
+			if !isPrimary {
+				serverZoneType = zoneSecondary
 			}
 
-			for _, zone := range zonesMaster.Zones {
+			for _, zone := range zonesPrimary.Zones {
 				if !util.SliceContainsString(zones, zone) {
 					continue
 				}
 
 				transferAcls := []string{defaultAclName}
-				notifyMasters := []string{defaultMastersName}
+				notifyPrimaries := []string{defaultPrimariesName}
 
-				_, hasAdditionalSlaves := currentMaster.AdditionalSlaves[zone]
-				if hasAdditionalSlaves {
-					transferAcls = append(transferAcls, getAdditionalAclMasterName(zone, listAcl))
-					notifyMasters = append(notifyMasters, getAdditionalAclMasterName(zone, listMaster))
+				_, hasAdditionalSecondaries := currentPrimary.AdditionalSecondaries[zone]
+				if hasAdditionalSecondaries {
+					transferAcls = append(transferAcls, getAdditionalAclPrimaryName(zone, listAcl))
+					notifyPrimaries = append(notifyPrimaries, getAdditionalAclPrimaryName(zone, listPrimaries))
 				}
 
-				dnssecEnabled := util.SliceContainsString(zonesMaster.DnssecZones, zone)
+				dnssecEnabled := util.SliceContainsString(zonesPrimary.DnssecZones, zone)
 
 				templateZones = append(templateZones, templateZone{
-					IsSlave:         !isMaster,
+					IsSecondary:     !isPrimary,
 					IsDnssecEnabled: dnssecEnabled,
-					MasterIP:        zonesMaster.IP,
+					PrimaryIP:       zonesPrimary.IP,
+					PrimaryPort:     zonesPrimary.Port,
 					Name:            zone,
-					Type:            masterZoneType,
+					Type:            serverZoneType,
 					TransferAcls:    transferAcls,
-					NotifyMasters:   notifyMasters,
+					NotifyPrimaries: notifyPrimaries,
 				})
 			}
 		}
 
 		templateVars.Zones = templateZones
 
-		var masterIPsWithoutCurrent = make([]string, 0, len(conf.Namespaces.DNS.Masters)-1)
-		for _, master := range conf.Namespaces.DNS.Masters {
-			if master.IP != currentMaster.IP {
-				masterIPsWithoutCurrent = append(masterIPsWithoutCurrent, master.IP)
+		var primaryIpsWithoutCurrent = make([]primaryIPAndPort, 0, len(conf.Namespaces.DNS.Primaries)-1)
+		for _, primary := range conf.Namespaces.DNS.Primaries {
+			if primary.IP != currentPrimary.IP {
+				primaryIpsWithoutCurrent = append(primaryIpsWithoutCurrent, primaryIPAndPort{IP: primary.IP, Port: primary.Port})
 			}
 		}
 
-		aclMastersLists := generateStandardAclMasterLists(masterIPsWithoutCurrent)
-		aclMastersLists = append(aclMastersLists, generateAdditionalAclMasterLists(&currentMaster)...)
-		templateVars.AclMasterLists = aclMastersLists
+		aclPrimaryLists := generateStandardAclPrimaryLists(primaryIpsWithoutCurrent)
+		aclPrimaryLists = append(aclPrimaryLists, generateAdditionalAclPrimaryLists(&currentPrimary)...)
+		templateVars.AclPrimaryLists = aclPrimaryLists
 
 		_, err = cw.WriteTemplate(
-			fmt.Sprintf("generated/bind-config/%s.conf", currentMaster.Name),
+			fmt.Sprintf("generated/bind-config/%s.conf", currentPrimary.Name),
 			templateVars,
 		)
 		if err != nil {
