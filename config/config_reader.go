@@ -25,11 +25,11 @@ type PrimaryConfig struct {
 	Zones                 []string                    `json:"zones"`
 	DnssecZones           []string                    `json:"dnssec_zones"`
 	Includes              []ZoneInclude               `json:"includes"`
-	AdditionalSecondaries AdditionalSecondariesConfig `json:"additional_secondaries"`
+	AdditionalSecondaries AdditionalSecondariesConfig `json:"additional_slaves"`
 }
 
 type DNSNamespaceConfig struct {
-	Primaries []PrimaryConfig `json:"primaries"`
+	Primaries []PrimaryConfig `json:"masters"`
 }
 
 type NamespaceConfig struct {

@@ -5,7 +5,7 @@
   },
   "namespaces": {
     "dns": {
-      "primaries": [
+      "masters": [
         {
           "name": "ns1.example.com",
           "ip": "192.168.0.1",
@@ -27,7 +27,7 @@
               ]
             }
           ],
-          "additional_secondaries": {
+          "additional_slaves": {
             "f.f.f.f.f.f.f.f.f.f.f.f.ip6.arpa": [
               "ffff:fff:fff::21",
               "ffff:fff:fff::22"
