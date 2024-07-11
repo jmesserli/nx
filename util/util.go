@@ -56,10 +56,10 @@ func SliceContainsString(slice []string, value string) bool {
 	return false
 }
 
-func FindMasterForZone(conf config.NXConfig, zone string) *config.MasterConfig {
-	for _, master := range conf.Namespaces.DNS.Masters {
-		if SliceContainsString(master.Zones, zone) {
-			return &master
+func FindPrimaryForZone(conf config.NXConfig, zone string) *config.PrimaryConfig {
+	for _, primary := range conf.Namespaces.DNS.Primaries {
+		if SliceContainsString(primary.Zones, zone) {
+			return &primary
 		}
 	}
 

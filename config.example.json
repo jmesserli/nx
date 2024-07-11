@@ -5,10 +5,11 @@
   },
   "namespaces": {
     "dns": {
-      "masters": [
+      "primaries": [
         {
           "name": "ns1.example.com",
           "ip": "192.168.0.1",
+          "port": 54,
           "dotted_mail": "user.example.com",
           "zones": [
             "example.com",
@@ -26,7 +27,7 @@
               ]
             }
           ],
-          "additional_slaves": {
+          "additional_secondaries": {
             "f.f.f.f.f.f.f.f.f.f.f.f.ip6.arpa": [
               "ffff:fff:fff::21",
               "ffff:fff:fff::22"

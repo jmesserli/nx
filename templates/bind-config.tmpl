@@ -4,10 +4,10 @@
  * Start of config for nameserver {{ .ServerName }}
  */
 
-/* acl and master lists */
-{{ range $aclMaster := .AclMasterLists -}}
-{{ $aclMaster.Type }} "{{$aclMaster.Name}}" {
-{{ range $ip := $aclMaster.Entries }}   {{ $ip }};
+/* acl and primary lists */
+{{ range $aclPrimary := .AclPrimaryLists -}}
+{{ $aclPrimary.Type }} "{{$aclPrimary.Name}}" {
+{{ range $entry := $aclPrimary.Entries }}   {{ $entry.IP }}{{ if and ($entry.Port) (eq $aclPrimary.Type "masters") }} port {{ $entry.Port }}{{ end }};
 {{ end -}}
 };
 {{ end }}
@@ -16,21 +16,21 @@
 zone "{{ $zone.Name }}" {
     type {{ $zone.Type }};
     file "/
-	{{- if $zone.IsSlave -}}
+	{{- if $zone.IsSecondary -}}
 	var/cache/bind
 	{{- else -}}
 	etc/bind/zones
 	{{- end -}}
 	/{{ $zone.Name }}.db";
-	{{- if $zone.IsSlave }}
-    masters { {{ $zone.MasterIP }}; };
+	{{- if $zone.IsSecondary }}
+    masters { {{ $zone.PrimaryIP }}{{ if $zone.PrimaryPort }} port {{ $zone.PrimaryPort }}{{ end }}; };
     transfer-source {{ $.ServerIP }};
 	{{- else }}
-    allow-transfer { {{ range $transfer := $zone.TransferAcls }}"{{ $transfer }}"; {{ end -}} };
-    also-notify { {{ range $master := $zone.NotifyMasters }}"{{ $master }}"; {{ end -}} };
+    allow-transfer { {{ range $transferAcl := $zone.TransferAcls }}"{{ $transferAcl }}"; {{ end -}} };
+    also-notify { {{ range $primaryAcl := $zone.NotifyPrimaries }}"{{ $primaryAcl }}"; {{ end -}} };
     notify yes;
 	{{- end -}}
-    {{- if and ($zone.IsDnssecEnabled) (not $zone.IsSlave) }}
+    {{- if and ($zone.IsDnssecEnabled) (not $zone.IsSecondary) }}
     /* This zone is DNSSEC enabled */
     dnssec-policy default;
     inline-signing yes;
