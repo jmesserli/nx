@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"peg.nu/nx/model"
 	"peg.nu/nx/ns/ipl"
 	"peg.nu/nx/util"
@@ -21,6 +22,9 @@ var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
 
 func main() {
 	conf := config.ReadConfig("./config.json")
+	if err := prepareOutputDirectories("generated"); err != nil {
+		logger.Fatal(err)
+	}
 
 	nc := netbox.New(conf)
 	logger.Println("Loading prefixes")
@@ -35,14 +39,45 @@ func main() {
 	sortPrefixList(prefixIPsList)
 	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, &conf)
 
-	logger.Println("Writing updated files report")
-	err := os.WriteFile("generated/updated_files.txt", []byte(strings.Join(conf.UpdatedFiles, "\n")), os.ModePerm)
-	if err != nil {
+	if err := writeGenerationReports("generated", conf.UpdatedFiles, time.Now()); err != nil {
 		logger.Fatal(err)
 	}
-	if len(conf.UpdatedFiles) > 0 {
-		err = os.WriteFile("generated/last_modified.txt", []byte(time.Now().Format(time.RFC3339)), os.ModePerm)
+}
+
+func prepareOutputDirectories(outputDirectory string) error {
+	for _, directory := range []string{"zones", "bind-config", "wg", "ipl"} {
+		path := filepath.Join(outputDirectory, directory)
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return fmt.Errorf("create output directory %s: %w", path, err)
+		}
 	}
+
+	return nil
+}
+
+func writeGenerationReports(outputDirectory string, updatedFiles []string, modifiedAt time.Time) error {
+	logger.Printf("Writing updated files report with %d changed files", len(updatedFiles))
+	if err := os.WriteFile(
+		filepath.Join(outputDirectory, "updated_files.txt"),
+		[]byte(strings.Join(updatedFiles, "\n")),
+		os.ModePerm,
+	); err != nil {
+		return fmt.Errorf("write updated files report: %w", err)
+	}
+
+	if len(updatedFiles) == 0 {
+		return nil
+	}
+
+	if err := os.WriteFile(
+		filepath.Join(outputDirectory, "last_modified.txt"),
+		[]byte(modifiedAt.Format(time.RFC3339)),
+		os.ModePerm,
+	); err != nil {
+		return fmt.Errorf("write last modified report: %w", err)
+	}
+
+	return nil
 }
 
 func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
