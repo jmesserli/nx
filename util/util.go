@@ -6,9 +6,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"slices"
+	"time"
+
 	"peg.nu/nx/config"
 	"peg.nu/nx/model"
-	"time"
 )
 
 var logger = log.New(os.Stdout, "[util] ", log.LstdFlags)
@@ -36,7 +38,7 @@ func CleanDirectoryExcept(directory string, exceptions []string, conf *config.NX
 
 	for _, dirEntry := range dirEntries {
 		name := fmt.Sprintf("%s/%s", directory, dirEntry.Name())
-		if SliceContainsString(exceptions, name) {
+		if slices.Contains(exceptions, name) {
 			continue
 		}
 
@@ -46,19 +48,9 @@ func CleanDirectoryExcept(directory string, exceptions []string, conf *config.NX
 	}
 }
 
-func SliceContainsString(slice []string, value string) bool {
-	for _, entry := range slice {
-		if entry == value {
-			return true
-		}
-	}
-
-	return false
-}
-
 func FindPrimaryForZone(conf config.NXConfig, zone string) *config.PrimaryConfig {
 	for _, primary := range conf.Namespaces.DNS.Primaries {
-		if SliceContainsString(primary.Zones, zone) {
+		if slices.Contains(primary.Zones, zone) {
 			return &primary
 		}
 	}
@@ -76,7 +68,7 @@ func CompareCIDRStrings(first, second string) bool {
 	firstBytes := cidrStringToByteSlice(first)
 	secondBytes := cidrStringToByteSlice(second)
 
-	for i := 0; i < len(firstBytes); i++ {
+	for i := range firstBytes {
 		if firstBytes[i] < secondBytes[i] {
 			return true
 		}
