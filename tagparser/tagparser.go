@@ -31,10 +31,10 @@ func (f annotatedField) getRegex() *regexp.Regexp {
 	return f.regex
 }
 
-func ParseTags(data interface{}, tags, parentTags []model.Tag) {
+func ParseTags(data any, tags, parentTags []model.Tag) {
 	t := reflect.TypeOf(data)
 
-	if t.Kind() != reflect.Ptr {
+	if t.Kind() != reflect.Pointer {
 		panic("data must be a pointer")
 	}
 
@@ -83,7 +83,7 @@ func ParseTags(data interface{}, tags, parentTags []model.Tag) {
 	}
 }
 
-func findValueForField(field annotatedField, tags []model.Tag) (interface{}, error) {
+func findValueForField(field annotatedField, tags []model.Tag) (any, error) {
 	rex := field.getRegex()
 
 	strValues := make([]string, 0)

@@ -35,7 +35,7 @@ func New(template *template.Template, ignorePatterns []*regexp.Regexp, useTabbed
 
 func (cw *CachedTemplateWriter) WriteTemplate(
 	file string,
-	data interface{},
+	data any,
 ) (bool, error) {
 	buf := bytes.Buffer{}
 	err := func() error {

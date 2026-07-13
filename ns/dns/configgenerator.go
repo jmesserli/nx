@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"text/template"
 	"time"
 
@@ -127,7 +128,7 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 			}
 
 			for _, zone := range zonesPrimary.Zones {
-				if !util.SliceContainsString(zones, zone) {
+				if !slices.Contains(zones, zone) {
 					continue
 				}
 
@@ -140,7 +141,7 @@ func GenerateConfigs(zones []string, conf *config.NXConfig) {
 					notifyPrimaries = append(notifyPrimaries, getAdditionalAclPrimaryName(zone, listPrimaries))
 				}
 
-				dnssecEnabled := util.SliceContainsString(zonesPrimary.DnssecZones, zone)
+				dnssecEnabled := slices.Contains(zonesPrimary.DnssecZones, zone)
 
 				templateZones = append(templateZones, templateZone{
 					IsSecondary:     !isPrimary,

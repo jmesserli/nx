@@ -1,5 +1,4 @@
-generated/
-
-config.json
-
 .idea/
+.go*/
+generated/
+config.json
