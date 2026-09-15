@@ -314,15 +314,13 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		}
 	}
 
-	indexWritten, err := writeSearchIndex(index)
+	updatedIndexFiles, err := writeSearchIndex(index)
 	if err != nil {
 		panic(err)
 	}
 	util.CleanDirectoryExcept("generated/zones", cw.ProcessedFiles, conf)
 	conf.UpdatedFiles = append(conf.UpdatedFiles, cw.UpdatedFiles...)
-	if indexWritten {
-		conf.UpdatedFiles = append(conf.UpdatedFiles, searchIndexPath)
-	}
+	conf.UpdatedFiles = append(conf.UpdatedFiles, updatedIndexFiles...)
 
 	zones := make([]string, 0, len(zoneRecordsMap))
 	for key := range zoneRecordsMap {

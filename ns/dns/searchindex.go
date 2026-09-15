@@ -1,9 +1,12 @@
 package dns
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,8 +16,9 @@ import (
 )
 
 const (
-	searchIndexVersion = 1
-	searchIndexPath    = "generated/search-index.json"
+	searchIndexVersion  = 1
+	searchIndexPath     = "generated/search-index.json"
+	searchIndexGzipPath = searchIndexPath + ".gz"
 )
 
 // searchIndex describes the generated DNS search document. These types are
@@ -145,10 +149,11 @@ func validSOAMailDomain(domain string) bool {
 	return true
 }
 
-// writeSearchIndex writes the index only when its semantic DNS content has
+// writeSearchIndex writes the JSON index only when its semantic DNS content has
 // changed. The generated timestamp is intentionally excluded from that
-// comparison so an unchanged generation leaves the existing file untouched.
-func writeSearchIndex(index searchIndex) (bool, error) {
+// comparison. Its gzip companion is repaired independently without touching an
+// otherwise-current JSON file.
+func writeSearchIndex(index searchIndex) ([]string, error) {
 	index.Version = searchIndexVersion
 	normalizeSearchIndex(&index)
 
@@ -158,24 +163,74 @@ func writeSearchIndex(index searchIndex) (bool, error) {
 			existing.Version == index.Version &&
 			reflect.DeepEqual(existing.Zones, index.Zones) &&
 			reflect.DeepEqual(existing.Records, index.Records) {
-			return false, nil
+			gzipCurrent, err := gzipContains(searchIndexGzipPath, content)
+			if err != nil {
+				return nil, err
+			}
+			if gzipCurrent {
+				return nil, nil
+			}
+			if err := writeGzip(searchIndexGzipPath, content); err != nil {
+				return nil, err
+			}
+			return []string{searchIndexGzipPath}, nil
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return false, err
+		return nil, err
 	}
 
 	index.GeneratedAt = time.Now().UTC().Format(time.RFC3339)
 	content, err := json.MarshalIndent(index, "", "  ")
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	content = append(content, '\n')
 
 	if err := os.MkdirAll(filepath.Dir(searchIndexPath), 0o755); err != nil {
-		return false, err
+		return nil, err
 	}
 	if err := os.WriteFile(searchIndexPath, content, 0o644); err != nil {
+		return nil, err
+	}
+	if err := writeGzip(searchIndexGzipPath, content); err != nil {
+		return nil, err
+	}
+	return []string{searchIndexPath, searchIndexGzipPath}, nil
+}
+
+func gzipContains(path string, want []byte) (bool, error) {
+	file, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
 		return false, err
 	}
-	return true, nil
+	defer file.Close()
+
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		return false, nil
+	}
+	content, readErr := io.ReadAll(reader)
+	closeErr := reader.Close()
+	if readErr != nil || closeErr != nil {
+		return false, nil
+	}
+	return bytes.Equal(content, want), nil
+}
+
+func writeGzip(path string, content []byte) error {
+	var compressed bytes.Buffer
+	writer, err := gzip.NewWriterLevel(&compressed, gzip.BestCompression)
+	if err != nil {
+		return err
+	}
+	if _, err := writer.Write(content); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
+	return os.WriteFile(path, compressed.Bytes(), 0o644)
 }

@@ -1,11 +1,14 @@
 package dns
 
 import (
+	"compress/gzip"
 	"encoding/json"
+	"io"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSOAContact(t *testing.T) {
@@ -76,9 +79,9 @@ func TestWriteSearchIndexCachesSemanticContent(t *testing.T) {
 		Zones:   []searchIndexZone{{Name: "example.com", Serial: 260915001, Nameserver: "ns.example.com", Contact: "admin@example.com"}},
 		Records: []searchIndexRecord{{Hostname: "host.example.com", Type: "A", Value: "192.0.2.1", Prefix: "192.0.2.0/24", Zone: "example.com"}},
 	}
-	written, err := writeSearchIndex(index)
-	if err != nil || !written {
-		t.Fatalf("first write = (%v, %v), want (true, nil)", written, err)
+	updatedFiles, err := writeSearchIndex(index)
+	if err != nil || !reflect.DeepEqual(updatedFiles, []string{searchIndexPath, searchIndexGzipPath}) {
+		t.Fatalf("first write = (%v, %v), want ([%s %s], nil)", updatedFiles, err, searchIndexPath, searchIndexGzipPath)
 	}
 	first, err := os.ReadFile(searchIndexPath)
 	if err != nil {
@@ -93,10 +96,13 @@ func TestWriteSearchIndexCachesSemanticContent(t *testing.T) {
 	if strings.Contains(string(first), `"serial": "`) {
 		t.Fatal("serial was serialized as a string")
 	}
+	if compressed := readGzip(t, searchIndexGzipPath); !reflect.DeepEqual(compressed, first) {
+		t.Fatal("compressed index does not contain the JSON index")
+	}
 
-	written, err = writeSearchIndex(index)
-	if err != nil || written {
-		t.Fatalf("unchanged write = (%v, %v), want (false, nil)", written, err)
+	updatedFiles, err = writeSearchIndex(index)
+	if err != nil || len(updatedFiles) != 0 {
+		t.Fatalf("unchanged write = (%v, %v), want (nil, nil)", updatedFiles, err)
 	}
 	second, err := os.ReadFile(searchIndexPath)
 	if err != nil {
@@ -106,12 +112,34 @@ func TestWriteSearchIndexCachesSemanticContent(t *testing.T) {
 		t.Fatal("unchanged write modified the file")
 	}
 
+	jsonSentinelTime := time.Date(2001, time.February, 3, 4, 5, 6, 0, time.UTC)
+	if err := os.Chtimes(searchIndexPath, jsonSentinelTime, jsonSentinelTime); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(searchIndexGzipPath); err != nil {
+		t.Fatal(err)
+	}
+	updatedFiles, err = writeSearchIndex(index)
+	if err != nil || !reflect.DeepEqual(updatedFiles, []string{searchIndexGzipPath}) {
+		t.Fatalf("missing gzip write = (%v, %v), want ([%s], nil)", updatedFiles, err, searchIndexGzipPath)
+	}
+	jsonInfo, err := os.Stat(searchIndexPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !jsonInfo.ModTime().Equal(jsonSentinelTime) {
+		t.Fatalf("repairing gzip changed JSON modification time to %s", jsonInfo.ModTime())
+	}
+	if compressed := readGzip(t, searchIndexGzipPath); !reflect.DeepEqual(compressed, second) {
+		t.Fatal("repaired gzip does not contain the unchanged JSON index")
+	}
+
 	if err := os.WriteFile(searchIndexPath, []byte("not json\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	written, err = writeSearchIndex(index)
-	if err != nil || !written {
-		t.Fatalf("malformed cache write = (%v, %v), want (true, nil)", written, err)
+	updatedFiles, err = writeSearchIndex(index)
+	if err != nil || !reflect.DeepEqual(updatedFiles, []string{searchIndexPath, searchIndexGzipPath}) {
+		t.Fatalf("malformed cache write = (%v, %v), want both index files", updatedFiles, err)
 	}
 
 	var oldVersion searchIndex
@@ -130,15 +158,15 @@ func TestWriteSearchIndexCachesSemanticContent(t *testing.T) {
 	if err := os.WriteFile(searchIndexPath, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	written, err = writeSearchIndex(index)
-	if err != nil || !written {
-		t.Fatalf("old version write = (%v, %v), want (true, nil)", written, err)
+	updatedFiles, err = writeSearchIndex(index)
+	if err != nil || !reflect.DeepEqual(updatedFiles, []string{searchIndexPath, searchIndexGzipPath}) {
+		t.Fatalf("old version write = (%v, %v), want both index files", updatedFiles, err)
 	}
 
 	index.Records[0].Value = "192.0.2.2"
-	written, err = writeSearchIndex(index)
-	if err != nil || !written {
-		t.Fatalf("changed write = (%v, %v), want (true, nil)", written, err)
+	updatedFiles, err = writeSearchIndex(index)
+	if err != nil || !reflect.DeepEqual(updatedFiles, []string{searchIndexPath, searchIndexGzipPath}) {
+		t.Fatalf("changed write = (%v, %v), want both index files", updatedFiles, err)
 	}
 
 	var decoded searchIndex
@@ -152,4 +180,24 @@ func TestWriteSearchIndexCachesSemanticContent(t *testing.T) {
 	if decoded.Version != searchIndexVersion || decoded.GeneratedAt == "" || decoded.Records[0].Value != "192.0.2.2" {
 		t.Fatalf("unexpected index: %+v", decoded)
 	}
+}
+
+func readGzip(t *testing.T, path string) []byte {
+	t.Helper()
+
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return content
 }

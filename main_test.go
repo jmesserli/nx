@@ -85,6 +85,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	wantUpdatedFiles := []string{
 		"generated/zones/example.com.db",
 		"generated/search-index.json",
+		"generated/search-index.json.gz",
 		"generated/bind-config/ns1.example.com.conf",
 	}
 	if strings.Join(firstRun.UpdatedFiles, "\n") != strings.Join(wantUpdatedFiles, "\n") {
@@ -145,6 +146,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	wantChangedFiles := []string{
 		"generated/zones/example.com.db",
 		"generated/search-index.json",
+		"generated/search-index.json.gz",
 	}
 	if strings.Join(thirdRun.UpdatedFiles, "\n") != strings.Join(wantChangedFiles, "\n") {
 		t.Fatalf("UpdatedFiles after zone change = %v, want %v", thirdRun.UpdatedFiles, wantChangedFiles)
@@ -172,9 +174,9 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 
 	fourthRun := newConfig()
 	generateAll(newPrefixIPs("192.0.2.11/24"), nil, nil, nil, &fourthRun)
-	wantUpdatedIndex := "generated/search-index.json"
-	if len(fourthRun.UpdatedFiles) != 1 || fourthRun.UpdatedFiles[0] != wantUpdatedIndex {
-		t.Fatalf("UpdatedFiles after index version change = %v, want [%s]", fourthRun.UpdatedFiles, wantUpdatedIndex)
+	wantUpdatedIndexes := []string{"generated/search-index.json", "generated/search-index.json.gz"}
+	if strings.Join(fourthRun.UpdatedFiles, "\n") != strings.Join(wantUpdatedIndexes, "\n") {
+		t.Fatalf("UpdatedFiles after index version change = %v, want %v", fourthRun.UpdatedFiles, wantUpdatedIndexes)
 	}
 	repairedIndexBytes, err := os.ReadFile(searchIndexPath)
 	if err != nil {
@@ -186,7 +188,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	if err := writeGenerationReports("generated", fourthRun.UpdatedFiles, indexModifiedAt); err != nil {
 		t.Fatalf("writeGenerationReports() after index-only change error = %v", err)
 	}
-	assertFileContent(t, filepath.Join("generated", "updated_files.txt"), wantUpdatedIndex)
+	assertFileContent(t, filepath.Join("generated", "updated_files.txt"), strings.Join(wantUpdatedIndexes, "\n"))
 	assertFileContent(t, filepath.Join("generated", "last_modified.txt"), indexModifiedAt.Format(time.RFC3339))
 }
 
