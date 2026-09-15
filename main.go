@@ -20,6 +20,8 @@ import (
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
 
+const maxConcurrentPrefixRequests = 4
+
 func main() {
 	conf := config.ReadConfig("./config.json")
 	if err := prepareOutputDirectories("generated"); err != nil {
@@ -88,6 +90,7 @@ func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
 	var enabledPrefixCount = 0
 	var prefixIPsList []prefixIPs
 	var prefixIPchan = make(chan prefixIPs)
+	requestSlots := make(chan struct{}, maxConcurrentPrefixRequests)
 	for _, prefix := range prefixes {
 		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0 || prefix.EnOptions.IPLEnabled) {
 			//logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
@@ -95,7 +98,7 @@ func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
 		}
 
 		enabledPrefixCount++
-		go getIPsForPrefix(nc, prefix, prefixIPchan)
+		go getIPsForPrefix(nc, prefix, prefixIPchan, requestSlots)
 	}
 
 	for i := 0; i < enabledPrefixCount; i++ {
@@ -156,9 +159,13 @@ type prefixIPs struct {
 	ips    []model.IPAddress
 }
 
-func getIPsForPrefix(nc netbox.Client, prefix model.IPAMPrefix, ch chan prefixIPs) {
+func getIPsForPrefix(nc netbox.Client, prefix model.IPAMPrefix, ch chan prefixIPs, requestSlots chan struct{}) {
 	//logger.Println(fmt.Sprintf("Getting ip addresses in %s", prefix.Prefix))
-	addresses := nc.GetIPAddressesByPrefix(prefix)
+	requestSlots <- struct{}{}
+	addresses := func() []model.IPAddress {
+		defer func() { <-requestSlots }()
+		return nc.GetIPAddressesByPrefix(prefix)
+	}()
 
 	ch <- prefixIPs{
 		prefix: prefix,

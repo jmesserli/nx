@@ -7,6 +7,7 @@ import (
 	"os"
 	"peg.nu/nx/model"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -18,6 +19,7 @@ import (
 )
 
 var logger = log.New(os.Stdout, "[generator] ", log.LstdFlags)
+var zoneSerialPattern = regexp.MustCompile(`(?m)^\s+(\d+)\s+; serial.*$`)
 
 // SOAInfo contains all the information to write the SOA record
 type SOAInfo struct {
@@ -156,6 +158,8 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 	}
 
 	var zoneRecordsMap = make(map[string][]resourceRecord)
+	index := searchIndex{}
+	forwardZones := make(map[string]bool)
 	for _, address := range addresses {
 		dnsIP := DNSIP{IP: &address}
 		tagparser.ParseTags(&dnsIP, address.Tags, address.Prefix.Tags)
@@ -183,6 +187,16 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 				Type:  recordType,
 				RData: ip.String(),
 			})
+			aliases := make([]string, 0, len(dnsIP.CNames))
+			for _, cname := range dnsIP.CNames {
+				aliases = append(aliases, cname+"."+dnsIP.ForwardZoneName)
+			}
+			index.Records = append(index.Records, searchIndexRecord{
+				Hostname: address.GetName() + "." + dnsIP.ForwardZoneName,
+				Type:     string(recordType), Value: ip.String(), Aliases: aliases,
+				Prefix: address.Prefix.Prefix, Zone: dnsIP.ForwardZoneName,
+			})
+			forwardZones[dnsIP.ForwardZoneName] = true
 
 			for _, cname := range dnsIP.CNames {
 				putMap(zoneRecordsMap, dnsIP.ForwardZoneName, resourceRecord{
@@ -264,17 +278,49 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		}
 		templateArgs.SOAInfo = soaInfo
 
-		_, err := cw.WriteTemplate(
+		written, err := cw.WriteTemplate(
 			fmt.Sprintf("generated/zones/%s.db", zone),
 			templateArgs,
 		)
 		if err != nil {
 			panic(err)
 		}
+		if forwardZones[zone] {
+			// The zone cache preserves the old serial when its content is unchanged.
+			// Use that serial so the index describes the file actually served by BIND.
+			if !written {
+				content, err := os.ReadFile(fmt.Sprintf("generated/zones/%s.db", zone))
+				if err != nil {
+					panic(err)
+				}
+				match := zoneSerialPattern.FindSubmatch(content)
+				if match == nil {
+					panic(fmt.Errorf("read serial for zone %s", zone))
+				}
+				soaInfo.Serial = string(match[1])
+			}
+			serial, err := strconv.ParseUint(soaInfo.Serial, 10, 32)
+			if err != nil {
+				panic(fmt.Errorf("serial for zone %s: %w", zone, err))
+			}
+			contact, err := soaContact(soaInfo.DottedMailResponsible)
+			if err != nil {
+				panic(fmt.Errorf("SOA contact for zone %s: %w", zone, err))
+			}
+			index.Zones = append(index.Zones, searchIndexZone{
+				Name: zone, Serial: uint32(serial),
+				Nameserver: strings.TrimSuffix(soaInfo.NameserverFQDN, "."), Contact: contact,
+			})
+		}
 	}
 
+	updatedIndexFiles, err := writeSearchIndex(index)
+	if err != nil {
+		panic(err)
+	}
 	util.CleanDirectoryExcept("generated/zones", cw.ProcessedFiles, conf)
 	conf.UpdatedFiles = append(conf.UpdatedFiles, cw.UpdatedFiles...)
+	conf.UpdatedFiles = append(conf.UpdatedFiles, updatedIndexFiles...)
 
 	zones := make([]string, 0, len(zoneRecordsMap))
 	for key := range zoneRecordsMap {
