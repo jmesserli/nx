@@ -79,7 +79,13 @@ func ParseTags(data any, tags, parentTags []model.Tag) {
 		if !field.fieldValue.CanSet() {
 			panic(fmt.Sprintf("error: Cannot set field <%s>", field.sField.Name))
 		}
-		field.fieldValue.Set(reflect.ValueOf(value))
+		if field.fieldValue.Kind() == reflect.Pointer {
+			pointer := reflect.New(field.fieldValue.Type().Elem())
+			pointer.Elem().Set(reflect.ValueOf(value))
+			field.fieldValue.Set(pointer)
+		} else {
+			field.fieldValue.Set(reflect.ValueOf(value))
+		}
 	}
 }
 
@@ -98,6 +104,9 @@ func findValueForField(field annotatedField, tags []model.Tag) (any, error) {
 
 	// convert to target type
 	fType := field.sField.Type
+	if fType.Kind() == reflect.Pointer {
+		fType = fType.Elem()
+	}
 	fKind := fType.Kind()
 
 	if fKind == reflect.Slice {

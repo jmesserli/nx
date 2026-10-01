@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"peg.nu/nx/model"
 	"strings"
 
 	"peg.nu/nx/config"
-	"peg.nu/nx/tagparser"
+	"peg.nu/nx/model"
+	"peg.nu/nx/resolver"
 )
 
 type Client struct {
@@ -76,9 +76,7 @@ func (c Client) GetIPAMPrefixes() []model.IPAMPrefix {
 
 	for i := range response.Results {
 		prefix := &response.Results[i]
-		prefix.EnOptions = model.EnableOptions{}
-
-		tagparser.ParseTags(&prefix.EnOptions, prefix.Tags, []model.Tag{})
+		resolver.ResolvePrefix(prefix)
 	}
 
 	return response.Results
@@ -99,6 +97,7 @@ func (c Client) GetIPAddressesByPrefix(prefix model.IPAMPrefix) []model.IPAddres
 	for i := range response.Results {
 		ip := &response.Results[i]
 		ip.Prefix = &prefix
+		resolver.ResolveAddress(ip)
 	}
 
 	return response.Results

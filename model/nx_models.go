@@ -1,8 +1,26 @@
 package model
 
-type EnableOptions struct {
-	DNSEnabled bool `nx:"enable,ns:dns"`
-	IPLEnabled bool `nx:"enable,ns:ipl"`
+// Configuration contains effective settings, independent of their NetBox source.
+type Configuration struct {
+	DNSEnabled         bool
+	DNSForwardDisabled bool
+	DNSForwardZone     string
+	DNSReverseZone     string
+	DNSCNames          []string
+	IPLEnabled         bool
+	IPLists            []string
+}
+
+// CustomFields uses nil for missing/null values and pointers for explicit overrides.
+// The nx annotations are only used by the temporary legacy-tag adapter.
+type CustomFields struct {
+	DNSEnabled         *bool     `json:"nx_dns_enabled" nx:"enable,ns:dns"`
+	DNSForwardDisabled *bool     `json:"nx_dns_forward_disabled"`
+	DNSForwardZone     *string   `json:"nx_dns_forward_zone" nx:"forward_zone,ns:dns"`
+	DNSReverseZone     *string   `json:"nx_dns_reverse_zone" nx:"reverse_zone,ns:dns"`
+	DNSCNames          *[]string `json:"nx_dns_cnames" nx:"cname,ns:dns"`
+	IPLEnabled         *bool     `json:"nx_ip_lists_enabled" nx:"enable,ns:ipl"`
+	IPLists            *[]string `json:"nx_ip_lists" nx:"list,ns:ipl"`
 }
 
 type IPAMPrefix struct {
@@ -10,7 +28,8 @@ type IPAMPrefix struct {
 	Prefix string `json:"prefix"`
 	Tags   []Tag  `json:"tags"`
 
-	EnOptions EnableOptions
+	CustomFields CustomFields  `json:"custom_fields"`
+	Config       Configuration `json:"-"`
 }
 
 type Tag struct {
@@ -22,12 +41,14 @@ type Tag struct {
 }
 
 type IPAddress struct {
-	ID          int    `json:"id"`
-	Address     string `json:"address"`
-	DnsName     string `json:"dns_name"`
-	Description string `json:"description"`
-	Tags        []Tag  `json:"tags"`
-	Prefix      *IPAMPrefix
+	ID           int    `json:"id"`
+	Address      string `json:"address"`
+	DnsName      string `json:"dns_name"`
+	Description  string `json:"description"`
+	Tags         []Tag  `json:"tags"`
+	Prefix       *IPAMPrefix
+	CustomFields CustomFields  `json:"custom_fields"`
+	Config       Configuration `json:"-"`
 }
 
 func (i IPAddress) GetName() string {

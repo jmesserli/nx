@@ -3,21 +3,16 @@ package ipl
 import (
 	"fmt"
 	"os"
-	"peg.nu/nx/cache"
-	"peg.nu/nx/config"
-	"peg.nu/nx/model"
-	"peg.nu/nx/tagparser"
-	"peg.nu/nx/util"
 	"regexp"
 	"strings"
 	"text/template"
 	"time"
-)
 
-type iplTarget struct {
-	Enabled bool     `nx:"enable,ns:ipl"`
-	Lists   []string `nx:"list,ns:ipl"`
-}
+	"peg.nu/nx/cache"
+	"peg.nu/nx/config"
+	"peg.nu/nx/model"
+	"peg.nu/nx/util"
+)
 
 type templateVars struct {
 	Name        string
@@ -29,17 +24,14 @@ func GenerateIPLists(addresses []model.IPAddress, conf *config.NXConfig) {
 	groupMap := make(map[string][]string)
 
 	for _, address := range addresses {
-		target := iplTarget{}
-		tagparser.ParseTags(&target, address.Tags, address.Prefix.Tags)
-
-		if !target.Enabled || len(target.Lists) == 0 {
+		if !address.Config.IPLEnabled || len(address.Config.IPLists) == 0 {
 			continue
 		}
 
 		slashIdx := strings.Index(address.Address, "/")
 		strAddress := address.Address[:slashIdx]
 
-		for _, list := range target.Lists {
+		for _, list := range address.Config.IPLists {
 			slice, ok := groupMap[list]
 
 			if ok {
