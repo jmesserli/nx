@@ -89,7 +89,7 @@ func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
 	var prefixIPchan = make(chan prefixIPs)
 	requestSlots := make(chan struct{}, maxConcurrentPrefixRequests)
 	for _, prefix := range prefixes {
-		if !(prefix.EnOptions.DNSEnabled || prefix.EnOptions.IPLEnabled) {
+		if !(prefix.Config.DNSEnabled || prefix.Config.IPLEnabled) {
 			//logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
 			continue
 		}
@@ -121,10 +121,10 @@ func generateAll(prefixIPsList []prefixIPs, conf *config.NXConfig) {
 	var dnsIps, iplIps []model.IPAddress
 
 	for _, prefixIP := range prefixIPsList {
-		if prefixIP.prefix.EnOptions.DNSEnabled {
+		if prefixIP.prefix.Config.DNSEnabled {
 			dnsIps = append(dnsIps, prefixIP.ips...)
 		}
-		if prefixIP.prefix.EnOptions.IPLEnabled {
+		if prefixIP.prefix.Config.IPLEnabled {
 			iplIps = append(iplIps, prefixIP.ips...)
 		}
 	}

@@ -11,9 +11,15 @@ import (
 
 	"peg.nu/nx/config"
 	"peg.nu/nx/model"
+	"peg.nu/nx/resolver"
 )
 
 func TestChangedGeneratedFileReachesReports(t *testing.T) {
+	t.Run("legacy tags", func(t *testing.T) { testChangedGeneratedFileReachesReports(t, false) })
+	t.Run("custom fields", func(t *testing.T) { testChangedGeneratedFileReachesReports(t, true) })
+}
+
+func testChangedGeneratedFileReachesReports(t *testing.T, customFields bool) {
 	templateFiles := []string{
 		"bind-config.tmpl",
 		"bind-zone.tmpl",
@@ -66,15 +72,18 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 				{Name: "nx:dns:enable[true]"},
 				{Name: "nx:dns:forward_zone[example.com]"},
 			},
-			EnOptions: model.EnableOptions{DNSEnabled: true},
 		}
+		if customFields {
+			enabled, zone := true, "example.com"
+			prefix.Tags = nil
+			prefix.CustomFields = model.CustomFields{DNSEnabled: &enabled, DNSForwardZone: &zone}
+		}
+		resolver.ResolvePrefix(&prefix)
+		addressModel := model.IPAddress{Address: address, DnsName: "host1", Prefix: &prefix}
+		resolver.ResolveAddress(&addressModel)
 		return []prefixIPs{{
 			prefix: prefix,
-			ips: []model.IPAddress{{
-				Address: address,
-				DnsName: "host1",
-				Prefix:  &prefix,
-			}},
+			ips:    []model.IPAddress{addressModel},
 		}}
 	}
 

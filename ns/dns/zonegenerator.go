@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"peg.nu/nx/model"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,7 +13,7 @@ import (
 
 	"peg.nu/nx/cache"
 	"peg.nu/nx/config"
-	"peg.nu/nx/tagparser"
+	"peg.nu/nx/model"
 	"peg.nu/nx/util"
 )
 
@@ -36,10 +35,10 @@ type SOAInfo struct {
 type DNSIP struct {
 	IP *model.IPAddress
 
-	Enabled         bool     `nx:"enable,ns:dns"`
-	ReverseZoneName string   `nx:"reverse_zone,ns:dns"`
-	ForwardZoneName string   `nx:"forward_zone,ns:dns"`
-	CNames          []string `nx:"cname,ns:dns"`
+	Enabled         bool
+	ReverseZoneName string
+	ForwardZoneName string
+	CNames          []string
 }
 
 var unknownNameCounter = 1
@@ -161,8 +160,12 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 	index := searchIndex{}
 	forwardZones := make(map[string]bool)
 	for _, address := range addresses {
-		dnsIP := DNSIP{IP: &address}
-		tagparser.ParseTags(&dnsIP, address.Tags, address.Prefix.Tags)
+		dnsIP := DNSIP{
+			IP: &address, Enabled: address.Config.DNSEnabled,
+			ForwardZoneName: address.Config.DNSForwardZone,
+			ReverseZoneName: address.Config.DNSReverseZone,
+			CNames:          address.Config.DNSCNames,
+		}
 
 		if !dnsIP.Enabled {
 			continue
@@ -173,7 +176,7 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		ip, _, _ := net.ParseCIDR(address.Address)
 		isIP4 := strings.Count(ip.String(), ":") < 2
 
-		if len(dnsIP.ForwardZoneName) > 0 {
+		if !address.Config.DNSForwardDisabled && len(dnsIP.ForwardZoneName) > 0 {
 			var recordType rrType
 			if isIP4 {
 				recordType = A
@@ -212,11 +215,6 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 			if err != nil {
 				logger.Printf("Could not parse cidr <%v> of %v", dnsIP.ReverseZoneName, address)
 				continue
-			}
-
-			if len(dnsIP.ForwardZoneName) == 0 {
-				// Parse parent tags to restore forward zone name
-				tagparser.ParseTags(&dnsIP, address.Prefix.Tags, []model.Tag{})
 			}
 
 			name, addressV4, err := ipToNibble(address.Address, false)
