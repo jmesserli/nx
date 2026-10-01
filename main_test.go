@@ -18,7 +18,6 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 		"bind-config.tmpl",
 		"bind-zone.tmpl",
 		"ip-list.tmpl",
-		"wg-config.tmpl",
 	}
 	templateContents := make(map[string][]byte, len(templateFiles))
 	for _, name := range templateFiles {
@@ -80,7 +79,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	}
 
 	firstRun := newConfig()
-	generateAll(newPrefixIPs("192.0.2.10/24"), nil, nil, nil, &firstRun)
+	generateAll(newPrefixIPs("192.0.2.10/24"), &firstRun)
 	searchIndexPath := filepath.Join("generated", "search-index.json")
 	wantUpdatedFiles := []string{
 		"generated/zones/example.com.db",
@@ -115,7 +114,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	}
 
 	secondRun := newConfig()
-	generateAll(newPrefixIPs("192.0.2.10/24"), nil, nil, nil, &secondRun)
+	generateAll(newPrefixIPs("192.0.2.10/24"), &secondRun)
 	if len(secondRun.UpdatedFiles) != 0 {
 		t.Fatalf("UpdatedFiles on unchanged run = %v, want none", secondRun.UpdatedFiles)
 	}
@@ -142,7 +141,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	assertFileContent(t, filepath.Join("generated", "last_modified.txt"), modifiedAt.Format(time.RFC3339))
 
 	thirdRun := newConfig()
-	generateAll(newPrefixIPs("192.0.2.11/24"), nil, nil, nil, &thirdRun)
+	generateAll(newPrefixIPs("192.0.2.11/24"), &thirdRun)
 	wantChangedFiles := []string{
 		"generated/zones/example.com.db",
 		"generated/search-index.json",
@@ -173,7 +172,7 @@ func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	}
 
 	fourthRun := newConfig()
-	generateAll(newPrefixIPs("192.0.2.11/24"), nil, nil, nil, &fourthRun)
+	generateAll(newPrefixIPs("192.0.2.11/24"), &fourthRun)
 	wantUpdatedIndexes := []string{"generated/search-index.json", "generated/search-index.json.gz"}
 	if strings.Join(fourthRun.UpdatedFiles, "\n") != strings.Join(wantUpdatedIndexes, "\n") {
 		t.Fatalf("UpdatedFiles after index version change = %v, want %v", fourthRun.UpdatedFiles, wantUpdatedIndexes)

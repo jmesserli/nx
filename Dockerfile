@@ -10,5 +10,5 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 COPY --from=builder /go/bin/nx .
 COPY --from=builder /go/src/github.com/jmesserli/nx/templates ./templates
-RUN mkdir -p generated/zones generated/ipl generated/hashes generated/bind-config generated/wg
+RUN mkdir -p generated/zones generated/ipl generated/hashes generated/bind-config
 CMD ["./nx"]

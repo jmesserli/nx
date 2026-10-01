@@ -5,17 +5,16 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"peg.nu/nx/model"
-	"peg.nu/nx/ns/ipl"
-	"peg.nu/nx/util"
 	"sort"
 	"strings"
 	"time"
 
 	"peg.nu/nx/config"
+	"peg.nu/nx/model"
 	"peg.nu/nx/netbox"
 	"peg.nu/nx/ns/dns"
-	"peg.nu/nx/ns/wg"
+	"peg.nu/nx/ns/ipl"
+	"peg.nu/nx/util"
 )
 
 var logger = log.New(os.Stdout, "[main] ", log.LstdFlags)
@@ -35,11 +34,9 @@ func main() {
 		panic(fmt.Errorf("could not load prefixes: 0 prefixes loaded"))
 	}
 
-	var dnsIps, wgIps, iplIps []model.IPAddress
-
 	prefixIPsList := loadPrefixes(prefixes, nc)
 	sortPrefixList(prefixIPsList)
-	generateAll(prefixIPsList, dnsIps, wgIps, iplIps, &conf)
+	generateAll(prefixIPsList, &conf)
 
 	if err := writeGenerationReports("generated", conf.UpdatedFiles, time.Now()); err != nil {
 		logger.Fatal(err)
@@ -47,7 +44,7 @@ func main() {
 }
 
 func prepareOutputDirectories(outputDirectory string) error {
-	for _, directory := range []string{"zones", "bind-config", "wg", "ipl"} {
+	for _, directory := range []string{"zones", "bind-config", "ipl"} {
 		path := filepath.Join(outputDirectory, directory)
 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
 			return fmt.Errorf("create output directory %s: %w", path, err)
@@ -92,7 +89,7 @@ func loadPrefixes(prefixes []model.IPAMPrefix, nc netbox.Client) []prefixIPs {
 	var prefixIPchan = make(chan prefixIPs)
 	requestSlots := make(chan struct{}, maxConcurrentPrefixRequests)
 	for _, prefix := range prefixes {
-		if !(prefix.EnOptions.DNSEnabled || len(prefix.EnOptions.WGVpnName) > 0 || prefix.EnOptions.IPLEnabled) {
+		if !(prefix.EnOptions.DNSEnabled || prefix.EnOptions.IPLEnabled) {
 			//logger.Println(fmt.Sprintf("Skipping prefix %s because no nx-features are enabled", prefix.Prefix))
 			continue
 		}
@@ -119,15 +116,13 @@ func sortPrefixList(prefixIPsList []prefixIPs) {
 	}
 }
 
-func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []model.IPAddress, iplIps []model.IPAddress, conf *config.NXConfig) {
+func generateAll(prefixIPsList []prefixIPs, conf *config.NXConfig) {
 	defer util.DurationSince(util.StartTracking("generateAll"))
+	var dnsIps, iplIps []model.IPAddress
 
 	for _, prefixIP := range prefixIPsList {
 		if prefixIP.prefix.EnOptions.DNSEnabled {
 			dnsIps = append(dnsIps, prefixIP.ips...)
-		}
-		if len(prefixIP.prefix.EnOptions.WGVpnName) > 0 {
-			wgIps = append(wgIps, prefixIP.ips...)
 		}
 		if prefixIP.prefix.EnOptions.IPLEnabled {
 			iplIps = append(iplIps, prefixIP.ips...)
@@ -148,8 +143,6 @@ func generateAll(prefixIPsList []prefixIPs, dnsIps []model.IPAddress, wgIps []mo
 
 	logger.Println("Generating BIND config files")
 	dns.GenerateConfigs(generatedZones, conf)
-	logger.Println("Generating Wireguard config files")
-	wg.GenerateWgConfigs(wgIps, conf)
 	logger.Println("Generating IP lists")
 	ipl.GenerateIPLists(iplIps, conf)
 }
