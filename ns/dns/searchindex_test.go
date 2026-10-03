@@ -2,7 +2,6 @@ package dns
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,11 +16,6 @@ import (
 )
 
 func TestGenerateZonesWritesSearchIndex(t *testing.T) {
-	t.Run("legacy tags", func(t *testing.T) { testGenerateZonesWritesSearchIndex(t, false) })
-	t.Run("custom fields", func(t *testing.T) { testGenerateZonesWritesSearchIndex(t, true) })
-}
-
-func testGenerateZonesWritesSearchIndex(t *testing.T, customFields bool) {
 	templateContent, err := os.ReadFile(filepath.Join("..", "..", "templates", "bind-zone.tmpl"))
 	if err != nil {
 		t.Fatalf("read BIND zone template: %v", err)
@@ -40,35 +34,23 @@ func testGenerateZonesWritesSearchIndex(t *testing.T, customFields bool) {
 	t.Chdir(workingDirectory)
 
 	prefixV4 := &model.IPAMPrefix{
-		Prefix: "192.0.2.0/24",
-		Tags: []model.Tag{
-			{Name: "nx:dns:enable[true]"},
-			{Name: "nx:dns:forward_zone[dev.example.com]"},
-		},
+		Prefix:       "192.0.2.0/24",
+		CustomFields: model.CustomFields{DNSEnabled: new(true), DNSForwardZone: new("dev.example.com")},
 	}
 	prefixV6 := &model.IPAMPrefix{
-		Prefix: "2001:db8::/64",
-		Tags: []model.Tag{
-			{Name: "nx:dns:enable[true]"},
-			{Name: "nx:dns:forward_zone[alpha.test]"},
-		},
+		Prefix:       "2001:db8::/64",
+		CustomFields: model.CustomFields{DNSEnabled: new(true), DNSForwardZone: new("alpha.test")},
 	}
 	reversePrefix := &model.IPAMPrefix{
-		Prefix: "198.51.100.0/24",
-		Tags: []model.Tag{
-			{Name: "nx:dns:enable[true]"},
-			{Name: "nx:dns:reverse_zone[198.51.100.0/24]"},
-		},
+		Prefix:       "198.51.100.0/24",
+		CustomFields: model.CustomFields{DNSEnabled: new(true), DNSReverseZone: new("198.51.100.0/24")},
 	}
 	addresses := []model.IPAddress{
 		{
-			Address: "192.0.2.42/24",
-			DnsName: "ZzZ.Dev.Example.com descriptive text",
-			Tags: []model.Tag{
-				{Name: "nx:dns:cname[z-alias]"},
-				{Name: "nx:dns:cname[a-alias]"},
-			},
-			Prefix: prefixV4,
+			Address:      "192.0.2.42/24",
+			DnsName:      "ZzZ.Dev.Example.com descriptive text",
+			CustomFields: model.CustomFields{DNSCNames: new([]string{"z-alias", "a-alias"})},
+			Prefix:       prefixV4,
 		},
 		{
 			Address: "2001:db8::7/64",
@@ -84,19 +66,9 @@ func testGenerateZonesWritesSearchIndex(t *testing.T, customFields bool) {
 
 	for _, prefix := range []*model.IPAMPrefix{prefixV4, prefixV6, reversePrefix} {
 		resolver.ResolvePrefix(prefix)
-		if customFields {
-			prefix.CustomFields = fieldsFromConfig(prefix.Config)
-			prefix.Tags = nil
-			resolver.ResolvePrefix(prefix)
-		}
 	}
 	for i := range addresses {
 		resolver.ResolveAddress(&addresses[i])
-		if customFields {
-			addresses[i].CustomFields = fieldsFromConfig(addresses[i].Config)
-			addresses[i].Tags = nil
-			resolver.ResolveAddress(&addresses[i])
-		}
 	}
 	conf := config.NXConfig{
 		Namespaces: config.NamespaceConfig{
@@ -209,57 +181,37 @@ func testGenerateZonesWritesSearchIndex(t *testing.T, customFields bool) {
 	assertZoneLines(t, filepath.Join("generated", "zones", "alpha.test.db"), `260915001 ; serial`)
 }
 
-func fieldsFromConfig(c model.Configuration) model.CustomFields {
-	return model.CustomFields{
-		DNSEnabled: &c.DNSEnabled, DNSForwardZone: &c.DNSForwardZone,
-		DNSForwardDisabled: &c.DNSForwardDisabled,
-		DNSReverseZone:     &c.DNSReverseZone, DNSCNames: &c.DNSCNames,
-		IPLEnabled: &c.IPLEnabled, IPLists: &c.IPLists,
-	}
-}
-
 func TestReverseOnlyAddressKeepsParentPTRZone(t *testing.T) {
 	templateContent, err := os.ReadFile(filepath.Join("..", "..", "templates", "bind-zone.tmpl"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, customFields := range []bool{false, true} {
-		t.Run(fmt.Sprintf("custom_fields=%t", customFields), func(t *testing.T) {
-			t.Chdir(t.TempDir())
-			if err := os.MkdirAll("templates", 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.MkdirAll("generated/zones", 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile("templates/bind-zone.tmpl", templateContent, 0o644); err != nil {
-				t.Fatal(err)
-			}
-			prefix := model.IPAMPrefix{Prefix: "192.0.2.0/24", Tags: []model.Tag{{Name: "nx:dns:enable[true]"}, {Name: "nx:dns:forward_zone[example.com]"}, {Name: "nx:dns:reverse_zone[192.0.2.0/24]"}}}
-			resolver.ResolvePrefix(&prefix)
-			address := model.IPAddress{Address: "192.0.2.10/24", DnsName: "host", Prefix: &prefix, Tags: []model.Tag{{Name: "nx:dns:forward_zone[]"}}}
-			if customFields {
-				prefix.CustomFields = fieldsFromConfig(prefix.Config)
-				prefix.Tags = nil
-				resolver.ResolvePrefix(&prefix)
-				disabled := true
-				address.Tags = nil
-				address.CustomFields.DNSForwardDisabled = &disabled
-			}
-			resolver.ResolveAddress(&address)
-			conf := config.NXConfig{}
-			zones := GenerateZones([]model.IPAddress{address}, SOAInfo{Serial: "260915001"}, &conf)
-			if !reflect.DeepEqual(zones, []string{"2.0.192.in-addr.arpa"}) {
-				t.Fatalf("unexpected zones: %v", zones)
-			}
-			body, err := os.ReadFile("generated/zones/2.0.192.in-addr.arpa.db")
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(string(body), "host.example.com.") {
-				t.Fatalf("missing parent PTR target: %s", body)
-			}
-		})
+
+	t.Chdir(t.TempDir())
+	if err := os.MkdirAll("templates", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll("generated/zones", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("templates/bind-zone.tmpl", templateContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	prefix := model.IPAMPrefix{Prefix: "192.0.2.0/24", CustomFields: model.CustomFields{DNSEnabled: new(true), DNSForwardZone: new("example.com"), DNSReverseZone: new("192.0.2.0/24")}}
+	resolver.ResolvePrefix(&prefix)
+	address := model.IPAddress{Address: "192.0.2.10/24", DnsName: "host", Prefix: &prefix, CustomFields: model.CustomFields{DNSForwardDisabled: new(true)}}
+	resolver.ResolveAddress(&address)
+	conf := config.NXConfig{}
+	zones := GenerateZones([]model.IPAddress{address}, SOAInfo{Serial: "260915001"}, &conf)
+	if !reflect.DeepEqual(zones, []string{"2.0.192.in-addr.arpa"}) {
+		t.Fatalf("unexpected zones: %v", zones)
+	}
+	body, err := os.ReadFile("generated/zones/2.0.192.in-addr.arpa.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "host.example.com.") {
+		t.Fatalf("missing parent PTR target: %s", body)
 	}
 }
 

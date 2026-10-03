@@ -22,13 +22,11 @@ func TestForwardDisabledPreservesPTR(t *testing.T) {
 		name                            string
 		prefixDisabled, addressDisabled *bool
 		wantForward                     bool
-		legacyClearing                  bool
 	}{
-		{"forward by default", nil, nil, true, false},
-		{"disable prefix", new(true), nil, false, false},
-		{"disable individual IPs", nil, new(true), false, false},
-		{"restore individual IPs", new(true), new(false), true, false},
-		{"legacy clearing normalizes to disable flag", nil, nil, false, true},
+		{"forward by default", nil, nil, true},
+		{"disable prefix", new(true), nil, false},
+		{"disable individual IPs", nil, new(true), false},
+		{"restore individual IPs", new(true), new(false), true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Chdir(t.TempDir())
@@ -41,18 +39,15 @@ func TestForwardDisabledPreservesPTR(t *testing.T) {
 			if err := os.WriteFile("templates/bind-zone.tmpl", templateContent, 0o644); err != nil {
 				t.Fatal(err)
 			}
-			prefixV4 := model.IPAMPrefix{Prefix: "192.0.2.0/24", CustomFields: model.CustomFields{DNSForwardDisabled: tt.prefixDisabled}, Tags: []model.Tag{{Name: "nx:dns:enable[true]"}, {Name: "nx:dns:forward_zone[dev.example.com]"}, {Name: "nx:dns:reverse_zone[192.0.2.0/24]"}}}
-			prefixV6 := model.IPAMPrefix{Prefix: "2001:db8::/64", CustomFields: model.CustomFields{DNSForwardDisabled: tt.prefixDisabled}, Tags: []model.Tag{{Name: "nx:dns:enable[true]"}, {Name: "nx:dns:forward_zone[dev.example.com]"}, {Name: "nx:dns:reverse_zone[2001:db8::/64]"}}}
+			prefixV4 := model.IPAMPrefix{Prefix: "192.0.2.0/24", CustomFields: model.CustomFields{DNSForwardDisabled: tt.prefixDisabled, DNSEnabled: new(true), DNSForwardZone: new("dev.example.com"), DNSReverseZone: new("192.0.2.0/24")}}
+			prefixV6 := model.IPAMPrefix{Prefix: "2001:db8::/64", CustomFields: model.CustomFields{DNSForwardDisabled: tt.prefixDisabled, DNSEnabled: new(true), DNSForwardZone: new("dev.example.com"), DNSReverseZone: new("2001:db8::/64")}}
 			resolver.ResolvePrefix(&prefixV4)
 			resolver.ResolvePrefix(&prefixV6)
 			addresses := []model.IPAddress{
-				{Address: "192.0.2.10/24", DnsName: "Host4.Dev.Example.com", Prefix: &prefixV4, CustomFields: model.CustomFields{DNSForwardDisabled: tt.addressDisabled}, Tags: []model.Tag{{Name: "nx:dns:cname[alias4]"}}},
-				{Address: "2001:db8::10/64", DnsName: "Host6.Dev.Example.com", Prefix: &prefixV6, CustomFields: model.CustomFields{DNSForwardDisabled: tt.addressDisabled}, Tags: []model.Tag{{Name: "nx:dns:cname[alias6]"}}},
+				{Address: "192.0.2.10/24", DnsName: "Host4.Dev.Example.com", Prefix: &prefixV4, CustomFields: model.CustomFields{DNSForwardDisabled: tt.addressDisabled, DNSCNames: new([]string{"alias4"})}},
+				{Address: "2001:db8::10/64", DnsName: "Host6.Dev.Example.com", Prefix: &prefixV6, CustomFields: model.CustomFields{DNSForwardDisabled: tt.addressDisabled, DNSCNames: new([]string{"alias6"})}},
 			}
 			for i := range addresses {
-				if tt.legacyClearing {
-					addresses[i].Tags = append(addresses[i].Tags, model.Tag{Name: "nx:dns:forward_zone[]"})
-				}
 				resolver.ResolveAddress(&addresses[i])
 			}
 			conf := config.NXConfig{}

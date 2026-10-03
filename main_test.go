@@ -15,11 +15,6 @@ import (
 )
 
 func TestChangedGeneratedFileReachesReports(t *testing.T) {
-	t.Run("legacy tags", func(t *testing.T) { testChangedGeneratedFileReachesReports(t, false) })
-	t.Run("custom fields", func(t *testing.T) { testChangedGeneratedFileReachesReports(t, true) })
-}
-
-func testChangedGeneratedFileReachesReports(t *testing.T, customFields bool) {
 	templateFiles := []string{
 		"bind-config.tmpl",
 		"bind-zone.tmpl",
@@ -68,16 +63,9 @@ func testChangedGeneratedFileReachesReports(t *testing.T, customFields bool) {
 	newPrefixIPs := func(address string) []prefixIPs {
 		prefix := model.IPAMPrefix{
 			Prefix: "192.0.2.0/24",
-			Tags: []model.Tag{
-				{Name: "nx:dns:enable[true]"},
-				{Name: "nx:dns:forward_zone[example.com]"},
-			},
 		}
-		if customFields {
-			enabled, zone := true, "example.com"
-			prefix.Tags = nil
-			prefix.CustomFields = model.CustomFields{DNSEnabled: &enabled, DNSForwardZone: &zone}
-		}
+		enabled, zone := true, "example.com"
+		prefix.CustomFields = model.CustomFields{DNSEnabled: &enabled, DNSForwardZone: &zone}
 		resolver.ResolvePrefix(&prefix)
 		addressModel := model.IPAddress{Address: address, DnsName: "host1", Prefix: &prefix}
 		resolver.ResolveAddress(&addressModel)
