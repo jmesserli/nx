@@ -19,12 +19,12 @@ func TestRESTResolvesConfiguration(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/api/ipam/prefixes/":
-			w.Write([]byte(`{"count":1,"results":[{"id":1,"prefix":"192.0.2.0/24","tags":[{"name":"nx:dns:enable[true]"}],"custom_fields":{"nx_dns_forward_zone":"example.com","nx_ip_lists_enabled":true,"nx_ip_lists":["internal"]}}]}`))
+			w.Write([]byte(`{"count":1,"results":[{"id":1,"prefix":"192.0.2.0/24","custom_fields":{"nx_dns_enabled":true,"nx_dns_forward_zone":"example.com","nx_ip_lists_enabled":true,"nx_ip_lists":["internal"]}}]}`))
 		case "/api/ipam/ip-addresses/":
 			if r.URL.Query().Get("parent") != "192.0.2.0/24" {
 				t.Error("incorrect parent filter")
 			}
-			w.Write([]byte(`{"count":1,"results":[{"id":2,"address":"192.0.2.10/24","dns_name":"host","tags":[{"name":"nx:dns:cname[legacy]"}],"custom_fields":{"nx_dns_cnames":["alias"],"nx_ip_lists_enabled":false}}]}`))
+			w.Write([]byte(`{"count":1,"results":[{"id":2,"address":"192.0.2.10/24","dns_name":"host","custom_fields":{"nx_dns_cnames":["alias"],"nx_ip_lists_enabled":false}}]}`))
 		default:
 			t.Errorf("unexpected path %s", r.URL.Path)
 			http.NotFound(w, r)
