@@ -147,6 +147,7 @@ func ipToNibble(cidr string, minimal bool) (string, bool, error) {
 
 // GenerateZones generates the BIND zonefiles
 func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *config.NXConfig) []string {
+	unknownNameCounter = 1
 	t := time.Now()
 
 	if len(defaultSoaInfo.Serial) == 0 {
@@ -241,10 +242,6 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 		}
 	}
 
-	templateArgs := templateArguments{
-		GeneratedAt: t.Format(time.RFC3339),
-	}
-
 	templateString, err := os.ReadFile("templates/bind-zone.tmpl")
 	if err != nil {
 		panic(err)
@@ -257,8 +254,11 @@ func GenerateZones(addresses []model.IPAddress, defaultSoaInfo SOAInfo, conf *co
 	cw := cache.New(zoneTemplate, ignoreRegexes, true)
 
 	for zone, records := range zoneRecordsMap {
-		templateArgs.Records = records
-		templateArgs.ZoneName = zone
+		templateArgs := templateArguments{
+			GeneratedAt: t.Format(time.RFC3339),
+			Records:     records,
+			ZoneName:    zone,
+		}
 
 		soaInfo := defaultSoaInfo
 		primaryConf := util.FindPrimaryForZone(*conf, zone)

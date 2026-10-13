@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"os"
 	"regexp"
 	"slices"
@@ -85,7 +86,8 @@ func generateAdditionalAclPrimaryLists(primaryConfig *config.PrimaryConfig) []ac
 	var lists []aclPrimaryList
 
 	if primaryConfig.AdditionalSecondaries != nil {
-		for zone, secondaries := range primaryConfig.AdditionalSecondaries {
+		for _, zone := range slices.Sorted(maps.Keys(primaryConfig.AdditionalSecondaries)) {
+			secondaries := primaryConfig.AdditionalSecondaries[zone]
 			var secondariesWithPorts []primaryIPAndPort
 			for _, secondary := range secondaries {
 				secondariesWithPorts = append(secondariesWithPorts, primaryIPAndPort{IP: secondary}) // port is empty for now

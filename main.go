@@ -108,7 +108,17 @@ func sortPrefixList(prefixIPsList []prefixIPs) {
 	defer util.DurationSince(util.StartTracking("sortPrefixList"))
 
 	sort.Slice(prefixIPsList, func(i, j int) bool {
-		return util.CompareCIDRStrings(prefixIPsList[i].prefix.Prefix, prefixIPsList[j].prefix.Prefix)
+		first, second := prefixIPsList[i].prefix, prefixIPsList[j].prefix
+		if util.CompareCIDRStrings(first.Prefix, second.Prefix) {
+			return true
+		}
+		if util.CompareCIDRStrings(second.Prefix, first.Prefix) {
+			return false
+		}
+		if first.Prefix != second.Prefix {
+			return first.Prefix < second.Prefix
+		}
+		return first.ID < second.ID
 	})
 
 	for _, pip := range prefixIPsList {

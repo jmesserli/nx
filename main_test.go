@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,28 @@ import (
 	"peg.nu/nx/model"
 	"peg.nu/nx/resolver"
 )
+
+func TestSortPrefixListBreaksAddressTies(t *testing.T) {
+	first := prefixIPs{
+		prefix: model.IPAMPrefix{ID: 1, Prefix: "192.0.2.0/24"},
+		ips: []model.IPAddress{
+			{ID: 3, Address: "192.0.2.10/24"},
+			{ID: 2, Address: "192.0.2.10/24"},
+			{ID: 4, Address: "192.0.2.2/24"},
+		},
+	}
+	second := prefixIPs{prefix: model.IPAMPrefix{ID: 2, Prefix: "192.0.2.0/24"}}
+	overlap := prefixIPs{prefix: model.IPAMPrefix{ID: 3, Prefix: "192.0.2.0/25"}}
+	for _, input := range [][]prefixIPs{{second, overlap, first}, {first, overlap, second}} {
+		sortPrefixList(input)
+		if got := []int{input[0].prefix.ID, input[1].prefix.ID, input[2].prefix.ID}; !reflect.DeepEqual(got, []int{1, 2, 3}) {
+			t.Fatalf("prefix IDs = %v, want [1 2 3]", got)
+		}
+		if got := []int{input[0].ips[0].ID, input[0].ips[1].ID, input[0].ips[2].ID}; !reflect.DeepEqual(got, []int{4, 2, 3}) {
+			t.Fatalf("address IDs = %v, want [4 2 3]", got)
+		}
+	}
+}
 
 func TestChangedGeneratedFileReachesReports(t *testing.T) {
 	templateFiles := []string{

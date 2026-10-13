@@ -60,7 +60,14 @@ func FindPrimaryForZone(conf config.NXConfig, zone string) *config.PrimaryConfig
 
 func IpAddressesLessFn(addresses []model.IPAddress) func(i, j int) bool {
 	return func(i, j int) bool {
-		return CompareCIDRStrings(addresses[i].Address, addresses[j].Address)
+		first, second := addresses[i], addresses[j]
+		if CompareCIDRStrings(first.Address, second.Address) {
+			return true
+		}
+		if CompareCIDRStrings(second.Address, first.Address) {
+			return false
+		}
+		return first.ID < second.ID
 	}
 }
 
